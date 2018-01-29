@@ -3,9 +3,9 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
 from torch.autograd import Variable
-from FaceRotNet.data_loader import UMDDataset
-from FaceRotNet.plotter import Plotter
-from FaceRotNet.model import FaderNetAutoencoder, FaderNetDiscriminator
+from data_loader import UMDDataset
+from plotter import Plotter
+from model import FaderNetAutoencoder, FaderNetDiscriminator
 import os
 
 
@@ -52,27 +52,27 @@ class FaderNetTrainer:
             batch_size = y.size()[0]
             degs_dim = self.t_params['deg_dim']
 
-            for angle_idx in range(0, 3 * degs_dim, degs_dim):
+            for angle_idx in range(0, 3*degs_dim, degs_dim):
                 y_target = y[:, angle_idx:angle_idx+degs_dim].max(1)[1]  # Index of target degree
                 delta = torch.LongTensor(batch_size).random_(degs_dim - 1) + 1
                 if self.use_cuda:
                     delta.cuda()
                 y_target = (y_target + Variable(delta)) % degs_dim
                 y_predict_target = y_predict[:, angle_idx:angle_idx+degs_dim]
-                loss = loss + self.adversarial_loss_func(y_predict_target, Variable(y_target))
+                loss = loss + self.adversarial_loss_func(y_predict_target, y_target)
         else:
             loss = loss + Variable(self.max_regress_loss) - self.adversarial_loss_func(Variable(y_predict), Variable(y))
 
         return loss
 
-    def reconstruct_loss(self, x, x_pred):
-        return self.self.reconstruction_loss_func(x, x_pred)
+    def reconstruct_loss(self, x, x_reconstruct):
+        return self.reconstruction_loss_func(x_reconstruct, x)
 
     def discr_iteration(self, batch):
         self.autoenc.eval()
         self.discrm.train()
 
-        x = Variable(batch['data'])
+        x = Variable(batch['data'], requires_grad=False)
         y = batch['label']
 
         if self.use_cuda:
@@ -95,13 +95,14 @@ class FaderNetTrainer:
         self.autoenc.train()
         self.discrm.eval()
 
-        x = Variable(batch['data'])
-        y = batch['label']
+        x = Variable(batch['data'], requires_grad=False)
+        y = Variable(batch['label'])
 
         if self.use_cuda:
             x.cuda()
+            y.cuda()
 
-        z, x_reconstruct = self.autoenc(x)
+        z, x_reconstruct = self.autoenc(x, y)
 
         with torch.no_grad():
             y_predict = self.discrm(z)

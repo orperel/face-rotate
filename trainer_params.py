@@ -1,5 +1,5 @@
 import os
-from FaceRotNet.trainer import FaderNetTrainer
+from trainer import FaderNetTrainer
 
 training_params = {
 

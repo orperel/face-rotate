@@ -1,7 +1,6 @@
 import os
 import torch
 from torch.utils.data import Dataset
-from torch.autograd import Variable
 
 
 class UMDDataset(Dataset):
@@ -56,8 +55,7 @@ class UMDDataset(Dataset):
 
     @staticmethod
     def to_one_hot(y, dof=180, dof_quant=1):
-        y_tensor = y.data if isinstance(y, Variable) else y
-        y_tensor = y_tensor.div_(dof_quant).type(torch.LongTensor).view(-1, 1)
+        y_tensor = y.div_(dof_quant).type(torch.LongTensor).view(-1, 1)
         y_one_hot = torch.zeros(y_tensor.size()[0], dof).scatter_(1, y_tensor, 1)
         return y_one_hot.view(-1)
 

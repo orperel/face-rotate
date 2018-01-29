@@ -2,6 +2,7 @@ import torch.nn as nn
 import torch
 
 MAX_NUM_FEATURES = 512  # Maximum depth (k) in Encoder / Decoder / Discriminator convolution block Ck
+IMAGE_DIMENSIONS = 3    # RGB
 
 
 def xavier_initialization(modules):
@@ -19,7 +20,7 @@ class FaderNetAutoencoder(nn.Module):
     @staticmethod
     def create_encoder_blocks(num_of_layers):
 
-        in_channels = 3    # RGB
+        in_channels = IMAGE_DIMENSIONS  # Normally RGB
         out_channels = 16
         neural_net = []
 
@@ -44,14 +45,14 @@ class FaderNetAutoencoder(nn.Module):
 
         for i in range(1, num_of_layers+1):
             neural_net.append(nn.Sequential(
-                nn.ConvTranspose2d(in_channels=in_channels+attr_dim, out_channels=out_channels+attr_dim,
+                nn.ConvTranspose2d(in_channels=in_channels+attr_dim, out_channels=out_channels,
                                    kernel_size=4, stride=2, padding=1, bias=False),
                 nn.BatchNorm2d(num_features=out_channels),
                 nn.ReLU(inplace=True)
             ))
 
             in_channels = out_channels
-            out_channels = min(2**(2+num_of_layers-i), MAX_NUM_FEATURES)
+            out_channels = IMAGE_DIMENSIONS if (i == num_of_layers-1) else min(2**(2+num_of_layers-i), MAX_NUM_FEATURES)
 
         return nn.ModuleList(neural_net)
 
@@ -72,8 +73,10 @@ class FaderNetAutoencoder(nn.Module):
 
     def decode(self, z, y):
         x_decoded = z
+        y_reshape = y.unsqueeze(2).unsqueeze(3)
         for layer in self.decoder_layers:
-            x_decoded = torch.cat([x_decoded, y], dim=1)
+            y_expanded = y_reshape.expand(-1, -1, x_decoded.shape[2], x_decoded.shape[3])
+            x_decoded = torch.cat([x_decoded, y_expanded], dim=1)
             x_decoded = layer(x_decoded)
 
         return x_decoded
@@ -95,7 +98,7 @@ class FaderNetDiscriminator(nn.Module):
             nn.Conv2d(in_channels=block_size, out_channels=block_size, kernel_size=4, stride=2, padding=1),
             nn.BatchNorm2d(num_features=block_size),
             nn.LeakyReLU(negative_slope=0.2, inplace=True),
-            nn.Dropout(p=0.3, inplace=True)
+            nn.Dropout(p=0.3)
         )
 
         self.proj = nn.Sequential(
