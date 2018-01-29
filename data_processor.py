@@ -178,6 +178,10 @@ def extract_data(path, batch_index, data_purpose):
           (total_enlarged, total_decimated, total_decimated+total_enlarged))
 
 
-# fetch_remote_dataset(remote_url=UMD_BATCH3_URL)
+fetch_remote_dataset(remote_url=UMD_BATCH1_URL)
+fetch_remote_dataset(remote_url=UMD_BATCH2_URL)
+fetch_remote_dataset(remote_url=UMD_BATCH3_URL)
 dataset_base_path = os.path.join('downloads', 'umdfaces_batch')
-extract_data(path=dataset_base_path, batch_index=3, data_purpose=DataPurpose.TRAINING)
+extract_data(path=dataset_base_path, batch_index=1, data_purpose=DataPurpose.TRAINING)
+extract_data(path=dataset_base_path, batch_index=2, data_purpose=DataPurpose.VALIDATION)
+extract_data(path=dataset_base_path, batch_index=3, data_purpose=DataPurpose.TEST)
