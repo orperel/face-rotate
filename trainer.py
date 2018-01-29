@@ -142,6 +142,9 @@ class FaderNetTrainer:
         plotter = Plotter(path=self.t_params['plot_path'])
         best_loss = float("inf")
 
+        if not os.path.exists(self.t_params['models_path']):
+            os.mkdir(self.t_params['models_path'])
+
         for t in range(self.t_params['epochs']):
 
             self.total_iterations = t
@@ -176,8 +179,8 @@ class FaderNetTrainer:
             # Always save best model found in term of minimal loss
             if best_loss > vmean_loss:
                 best_loss = vmean_loss
-                torch.save(self.discrm, './' + self.t_params['models_path'] + 'discriminator' + str(t+1) + '.pth')
-                torch.save(self.autoenc, './' + self.t_params['models_path'] + 'autoencoder' + str(t+1) + '.pth')
+                torch.save(self.discrm, self.t_params['models_path'] + 'discriminator' + str(t+1) + '.pth')
+                torch.save(self.autoenc, self.t_params['models_path'] + 'autoencoder' + str(t+1) + '.pth')
 
             # plotter.update_loss_plot_data(mode='validation', new_epoch=(t + 1), new_loss=vmean_loss)
 
