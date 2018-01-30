@@ -87,6 +87,7 @@ def normalize_dof(yaw, pitch, roll):
 
 def extract_data(path, batch_index, data_purpose):
     path += str(batch_index)
+    path = os.path.join(path, 'umdfaces_batch' + str(batch_index))
     assert os.path.isdir(path), "Invalid path supplied for UMDFaces dataset: %r" % path
 
     target_dir = os.path.join('dataset', data_purpose.value[0])
