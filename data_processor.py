@@ -109,7 +109,7 @@ def extract_data(root_path, batch_index, data_purpose):
         for row_idx, row in enumerate(reader):
 
             filename = os.path.join(downloads_path, row['FILE'])
-            if not os.path.isfile(filename)
+            if not os.path.isfile(filename):
                 print("Bad image file in dataset: %r" % filename)
                 continue
             img = cv2.imread(filename)
