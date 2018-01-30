@@ -8,12 +8,12 @@ import tarfile
 from enum import Enum
 
 
-NN_INPUT_SIZE = 256             # Input size to the Fader NN
-ENTRIES_PER_OUTPUT = 40000      # Amount of entries iterated for each batch
+NN_INPUT_SIZE = 256              # Input size to the Fader NN
+ENTRIES_PER_OUTPUT = 40000       # Amount of entries iterated for each batch
 UMD_BATCH1_URL = 'https://obj.umiacs.umd.edu/umdfaces/umdfaces_images/umdfaces_batch1.tar.gz'
 UMD_BATCH2_URL = 'https://obj.umiacs.umd.edu/umdfaces/umdfaces_images/umdfaces_batch2.tar.gz'
 UMD_BATCH3_URL = 'https://obj.umiacs.umd.edu/umdfaces/umdfaces_images/umdfaces_batch3.tar.gz'
-data_root = '.'                 # Where should the dataset be downloaded / extracted to
+data_root = '/mnt/data/orperel'  # Where should the dataset be downloaded / extracted to
 
 
 class DataPurpose(Enum):
@@ -85,14 +85,15 @@ def normalize_dof(yaw, pitch, roll):
     return yaw_n, pitch_n, roll_n
 
 
-def extract_data(path, batch_index, data_purpose):
-    path += str(batch_index)
-    path = os.path.join(path, 'umdfaces_batch' + str(batch_index))
-    assert os.path.isdir(path), "Invalid path supplied for UMDFaces dataset: %r" % path
+def extract_data(root_path, batch_index, data_purpose):
+    downloads_path = os.path.join(root_path, 'downloads', 'umdfaces_batch')
+    downloads_path += str(batch_index)
+    downloads_path = os.path.join(downloads_path, 'umdfaces_batch' + str(batch_index))
+    assert os.path.isdir(downloads_path), "Invalid downloads_path supplied for UMDFaces dataset: %r" % downloads_path
 
-    target_dir = os.path.join('dataset', data_purpose.value[0])
-    if not os.path.isdir(target_dir):
-        os.mkdir(target_dir)
+    target_path = os.path.join(root_path, 'dataset', data_purpose.value[0])
+    if not os.path.isdir(target_path):
+        os.mkdir(target_path)
 
     annotationsFile = 'umdfaces_batch%i_ultraface.csv' % batch_index
     decimated = []
@@ -101,12 +102,12 @@ def extract_data(path, batch_index, data_purpose):
     enlarged_labels = []
     total_decimated = 0
     total_enlarged = 0
-    with open(os.path.join(path, annotationsFile), 'r', encoding='utf-8') as annotationsCsv:
+    with open(os.path.join(downloads_path, annotationsFile), 'r', encoding='utf-8') as annotationsCsv:
 
         reader = csv.DictReader(annotationsCsv)
         for row_idx, row in enumerate(reader):
 
-            filename = os.path.join(path, row['FILE'])
+            filename = os.path.join(downloads_path, row['FILE'])
             assert os.path.isfile(filename), "Bad image file in dataset: %r" % filename
             img = cv2.imread(filename)
             x, y = round(float(row['FACE_X'])), round(float(row['FACE_Y']))
@@ -137,11 +138,11 @@ def extract_data(path, batch_index, data_purpose):
                 all_batch = np.concatenate((decimated_batch, enlarged_batch), axis=0)
 
                 save_dataset(data_array=decimated_batch, start_entry=total_decimated, data_name='decimated',
-                             batchIndex=batch_index, target_dir=target_dir)
+                             batchIndex=batch_index, target_dir=target_path)
                 save_dataset(data_array=enlarged_batch, start_entry=total_enlarged, data_name='enlarged',
-                             batchIndex=batch_index, target_dir=target_dir)
+                             batchIndex=batch_index, target_dir=target_path)
                 save_dataset(data_array=all_batch, start_entry=total_decimated+total_enlarged, data_name='all',
-                             batchIndex=batch_index, target_dir=target_dir)
+                             batchIndex=batch_index, target_dir=target_path)
 
                 decimated = []
                 enlarged = []
@@ -152,15 +153,15 @@ def extract_data(path, batch_index, data_purpose):
         if decimated:
             decimated_batch = np.concatenate([img_data.transpose((2, 0, 1))[None] for img_data in decimated])
             save_dataset(data_array=decimated_batch, start_entry=total_decimated, data_name='decimated',
-                         batchIndex=batch_index, target_dir=target_dir)
+                         batchIndex=batch_index, target_dir=target_path)
         if enlarged:
             enlarged_batch = np.concatenate([img_data.transpose((2, 0, 1))[None] for img_data in enlarged])
             save_dataset(data_array=enlarged_batch, start_entry=total_enlarged, data_name='enlarged',
-                         batchIndex=batch_index, target_dir=target_dir)
+                         batchIndex=batch_index, target_dir=target_path)
         if decimated or enlarged:
             all_batch = np.concatenate((decimated_batch, enlarged_batch), axis=0)
             save_dataset(data_array=all_batch, start_entry=total_decimated + total_enlarged, data_name='all',
-                         batchIndex=batch_index, target_dir=target_dir)
+                         batchIndex=batch_index, target_dir=target_path)
 
         decimated_labels_batch = np.concatenate([label[None] for label in decimated_labels])
         enlarged_labels_batch = np.concatenate([label[None] for label in enlarged_labels])
@@ -170,11 +171,11 @@ def extract_data(path, batch_index, data_purpose):
         total_enlarged += len(enlarged_batch)
 
         save_labels(labels_array=decimated_labels_batch, data_name='decimated',
-                    batchIndex=batch_index, target_dir=target_dir)
+                    batchIndex=batch_index, target_dir=target_path)
         save_labels(labels_array=enlarged_labels_batch, data_name='enlarged',
-                    batchIndex=batch_index, target_dir=target_dir)
+                    batchIndex=batch_index, target_dir=target_path)
         save_labels(labels_array=all_labels_batch, data_name='all',
-                    batchIndex=batch_index, target_dir=target_dir)
+                    batchIndex=batch_index, target_dir=target_path)
 
     print('Extracted %i enlarged and %i decimated samples. Total of %i' %
           (total_enlarged, total_decimated, total_decimated+total_enlarged))
@@ -183,7 +184,6 @@ def extract_data(path, batch_index, data_purpose):
 fetch_remote_dataset(remote_url=UMD_BATCH1_URL)
 fetch_remote_dataset(remote_url=UMD_BATCH2_URL)
 fetch_remote_dataset(remote_url=UMD_BATCH3_URL)
-dataset_base_path = os.path.join(data_root, 'downloads', 'umdfaces_batch')
-extract_data(path=dataset_base_path, batch_index=1, data_purpose=DataPurpose.TRAINING)
-extract_data(path=dataset_base_path, batch_index=2, data_purpose=DataPurpose.VALIDATION)
-extract_data(path=dataset_base_path, batch_index=3, data_purpose=DataPurpose.TEST)
+extract_data(path=data_root, batch_index=1, data_purpose=DataPurpose.TRAINING)
+extract_data(path=data_root, batch_index=2, data_purpose=DataPurpose.VALIDATION)
+extract_data(path=data_root, batch_index=3, data_purpose=DataPurpose.TEST)
