@@ -42,6 +42,7 @@ def fetch_remote_dataset(remote_url):
     if not os.path.exists(local_path):
         os.makedirs(local_path)
     elif os.stat(local_path).st_size > 0:
+        print('Batch %i already downloaded.', index)
         return  # Dataset already fetched
     print('Downloading dataset from ' + remote_url + '..')
     filename = wget.download(url=remote_url)
