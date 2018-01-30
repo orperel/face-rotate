@@ -42,7 +42,7 @@ def fetch_remote_dataset(remote_url):
     if not os.path.exists(local_path):
         os.makedirs(local_path)
     elif os.stat(local_path).st_size > 0:
-        print('Batch %i already downloaded.', index)
+        print('Batch %i already downloaded.' % (index))
         return  # Dataset already fetched
     print('Downloading dataset from ' + remote_url + '..')
     filename = wget.download(url=remote_url)
@@ -109,7 +109,9 @@ def extract_data(root_path, batch_index, data_purpose):
         for row_idx, row in enumerate(reader):
 
             filename = os.path.join(downloads_path, row['FILE'])
-            assert os.path.isfile(filename), "Bad image file in dataset: %r" % filename
+            if not os.path.isfile(filename)
+                print("Bad image file in dataset: %r" % filename)
+                continue
             img = cv2.imread(filename)
             x, y = round(float(row['FACE_X'])), round(float(row['FACE_Y']))
             width, height = round(float(row['FACE_WIDTH'])), round(float(row['FACE_HEIGHT']))
