@@ -41,6 +41,10 @@ class FaderNetTrainer:
         self.best_discrm_loss = float("inf")
         self.best_autoenc_loss = float("inf")
 
+        self.lambda_e = t_params['autoenc_loss_reg_init']
+        self.lambda_e_max = t_params['autoenc_loss_reg']
+        self.lambda_e_step_size = (self.lambda_e_max - self.lambda_e) / t_params['autoenc_loss_reg_adaption_steps']
+
     def adversarial_loss(self, y, y_predict):
         loss = 0
         if self.ypr_quant:
@@ -121,7 +125,7 @@ class FaderNetTrainer:
 
         adversarial_loss = self.complementary_adversarial_loss(y, y_predict)
         reconstruction_loss = self.reconstruct_loss(x, x_reconstruct)
-        loss = reconstruction_loss + self.t_params['autoenc_loss_reg'] * adversarial_loss
+        loss = reconstruction_loss + self.lambda_e * adversarial_loss
 
         assert not (loss != loss).data.any(), "NaN result in loss function"
 
@@ -187,6 +191,8 @@ class FaderNetTrainer:
 
             with torch.no_grad():
                 d_mean_loss, ae_mean_loss = self.step_single_epoch(t=t, dataloader=validation_dataloader, mode='Validation')
+
+            self.lambda_e = min(self.lambda_e + self.lambda_e_step_size, self.lambda_e_max)
 
             # Always save best model found in term of minimal loss
             if self.best_discrm_loss > d_mean_loss:

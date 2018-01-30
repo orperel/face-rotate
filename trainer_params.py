@@ -4,7 +4,7 @@ from trainer import FaderNetTrainer
 training_params = {
 
     # General params
-    'use_cuda': False,
+    'use_cuda': True,
 
     # Choose the group of data used:
     # - 'enlarged' - faces smaller than 256, scaled up
@@ -20,7 +20,7 @@ training_params = {
     'models_path': "models" + os.path.sep,
 
     # SGD parameters
-    'batch_size': 32,
+    'batch_size': 4,
     'epochs': 1000,
 
     # Adam optimizer params
