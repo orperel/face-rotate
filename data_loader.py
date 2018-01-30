@@ -7,7 +7,8 @@ class UMDDataset(Dataset):
 
     def __init__(self, path, ypr_quant, deg_dim, use_cuda):
 
-        assert ypr_quant and (180 % deg_dim == 0), "Invalid deg_dim parameter defined for trainer params: %r" % deg_dim
+        assert not ypr_quant or (180 % deg_dim == 0), \
+            "Invalid deg_dim parameter defined for trainer params: %r" % deg_dim
 
         self.ypr_quant = ypr_quant
         self.deg_dim = deg_dim
@@ -47,11 +48,11 @@ class UMDDataset(Dataset):
 
     @staticmethod
     def normalize_img(x):
-        return x.float().div_(255).mul_(2).sub_(1) # To range -1 to 1
+        return x.float().div(255).mul_(2).sub_(1)  # To range -1 to 1
 
     @staticmethod
     def normalize_angles(y):
-        return y.mul_(180)
+        return y.mul(180).float()
 
     @staticmethod
     def to_one_hot(y, dof=180, dof_quant=1):
@@ -70,11 +71,13 @@ class UMDDataset(Dataset):
         x = self.normalize_img(x)
         y = self.labels[idx]
         y = self.normalize_angles(y)
-        y = self.to_one_hot(y, self.deg_dim, self.deg_dim_quant)
+
+        if self.ypr_quant:
+            y = self.to_one_hot(y, self.deg_dim, self.deg_dim_quant)
 
         if self.use_cuda:
-            x.cuda()
-            y.cuda()
+            x = x.cuda()
+            y = y.cuda()
 
         return {'data': x, 'label': y}
 

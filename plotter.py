@@ -27,6 +27,16 @@ class Plotter:
 
         self.loss_plot_data = {}
 
+    def __getstate__(self):
+        """Return state values to be pickled."""
+        return (self.loss_plot_data, self.last_color_ptr, self.path)
+
+    def __setstate__(self, state):
+        """Restore state from the unpickled state values."""
+        self.loss_plot_data, self.last_color_ptr, self.path = state
+        self.vis = visdom.Visdom()
+        self.colors = ['blue', 'red', 'green', 'yellow', 'orange', 'pink', 'brown']
+
     def update_loss_plot_data(self, mode, new_epoch, new_loss):
 
         if mode not in self.loss_plot_data:
