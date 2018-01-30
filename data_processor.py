@@ -13,6 +13,7 @@ ENTRIES_PER_OUTPUT = 40000      # Amount of entries iterated for each batch
 UMD_BATCH1_URL = 'https://obj.umiacs.umd.edu/umdfaces/umdfaces_images/umdfaces_batch1.tar.gz'
 UMD_BATCH2_URL = 'https://obj.umiacs.umd.edu/umdfaces/umdfaces_images/umdfaces_batch2.tar.gz'
 UMD_BATCH3_URL = 'https://obj.umiacs.umd.edu/umdfaces/umdfaces_images/umdfaces_batch3.tar.gz'
+data_root = '.'                 # Where should the dataset be downloaded / extracted to
 
 
 class DataPurpose(Enum):
@@ -20,12 +21,12 @@ class DataPurpose(Enum):
     VALIDATION = 'validation',
     TEST = 'test'
 
-'''
-UMDFaces dataset:
-https://arxiv.org/pdf/1611.01484v2.pdf
-'''
 
 def fetch_remote_dataset(remote_url):
+    '''
+    UMDFaces dataset:
+    https://arxiv.org/pdf/1611.01484v2.pdf
+    '''
 
     if 'batch1' in remote_url:
         index = '1'
@@ -36,7 +37,7 @@ def fetch_remote_dataset(remote_url):
     else:
         raise ValueError('Invalid batch index for UMD batch')
 
-    local_path = os.path.join('downloads', 'umdfaces_batch' + index)
+    local_path = os.path.join(data_root, 'downloads', 'umdfaces_batch' + index)
 
     if not os.path.exists(local_path):
         os.makedirs(local_path)
@@ -45,7 +46,7 @@ def fetch_remote_dataset(remote_url):
     print('Downloading dataset from ' + remote_url + '..')
     filename = wget.download(url=remote_url)
 
-    print('Extracting dataset to ' + local_path)
+    print('\nExtracting dataset to ' + local_path)
     tar = tarfile.open(filename)
     tar.extractall(path=local_path)
     tar.close()
@@ -181,7 +182,7 @@ def extract_data(path, batch_index, data_purpose):
 fetch_remote_dataset(remote_url=UMD_BATCH1_URL)
 fetch_remote_dataset(remote_url=UMD_BATCH2_URL)
 fetch_remote_dataset(remote_url=UMD_BATCH3_URL)
-dataset_base_path = os.path.join('downloads', 'umdfaces_batch')
+dataset_base_path = os.path.join(data_root, 'downloads', 'umdfaces_batch')
 extract_data(path=dataset_base_path, batch_index=1, data_purpose=DataPurpose.TRAINING)
 extract_data(path=dataset_base_path, batch_index=2, data_purpose=DataPurpose.VALIDATION)
 extract_data(path=dataset_base_path, batch_index=3, data_purpose=DataPurpose.TEST)
