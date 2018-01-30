@@ -93,7 +93,7 @@ def extract_data(root_path, batch_index, data_purpose):
 
     target_path = os.path.join(root_path, 'dataset', data_purpose.value[0])
     if not os.path.isdir(target_path):
-        os.mkdir(target_path)
+        os.makedirs(target_path)
 
     annotationsFile = 'umdfaces_batch%i_ultraface.csv' % batch_index
     decimated = []
