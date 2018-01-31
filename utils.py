@@ -1,3 +1,23 @@
+import pycuda.driver as drv
+import logging
+
+
+def query_available_gpus():
+    drv.init()
+    gpu_count = drv.Device.count()
+
+    if gpu_count > 0:
+        logging.info("%d GPU(s) found:" % drv.Device.count())
+
+        for ordinal in range(drv.Device.count()):
+            dev = drv.Device(ordinal)
+            logging.info('ID', ordinal, dev.name())
+    else:
+        logging.info("No GPUs found.")
+
+    return gpu_count
+
+
 def clip_grad_norm(parameters, max_norm, norm_type=2):
     """Clips gradient norm of an iterable of parameters.
     The norm is computed over all gradients together, as if they were

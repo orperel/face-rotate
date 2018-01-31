@@ -34,7 +34,7 @@ class FaderNetAutoencoder(nn.Module):
             in_channels = out_channels
             out_channels = min(out_channels * 2, MAX_NUM_FEATURES)
 
-        return nn.ModuleList(neural_net)
+        return nn.Sequential(*neural_net)
 
     @staticmethod
     def create_decoder_blocks(num_of_layers, attr_dim):
@@ -56,20 +56,20 @@ class FaderNetAutoencoder(nn.Module):
 
         return nn.ModuleList(neural_net)
 
-    def __init__(self, num_of_layers, attr_dim):
+    def __init__(self, num_of_layers, attr_dim, gpus_count=1):
         super(FaderNetAutoencoder, self).__init__()
 
+        self.gpus_count = gpus_count
         self.encoder_layers = self.create_encoder_blocks(num_of_layers)
         self.decoder_layers = self.create_decoder_blocks(num_of_layers, attr_dim)
         xavier_initialization(self.encoder_layers)
         xavier_initialization(self.decoder_layers)
 
     def encode(self, x):
-        z = x
-        for layer in self.encoder_layers:
-            z = layer(z)
-
-        return z
+        if self.gpus_count > 1:
+            return nn.parallel.data_parallel(self.encoder_layers, x, range(self.gpus_count))
+        else:
+            return self.encoder_layers(x)
 
     def decode(self, z, y):
         x_decoded = z
@@ -89,9 +89,10 @@ class FaderNetAutoencoder(nn.Module):
 
 class FaderNetDiscriminator(nn.Module):
 
-    def __init__(self, num_of_layers, attr_dim):
+    def __init__(self, num_of_layers, attr_dim, gpus_count=1):
         super(FaderNetDiscriminator, self).__init__()
 
+        self.gpus_count = gpus_count
         block_size = min(2 ** (3 + num_of_layers), MAX_NUM_FEATURES)
 
         self.c512 = nn.Sequential(
@@ -113,6 +114,11 @@ class FaderNetDiscriminator(nn.Module):
 
         batch_size = z.size()[0]
         y_prediction = self.c512(z)
-        y_prediction = self.proj(y_prediction.view(batch_size, -1))
+        y_flat = y_prediction.view(batch_size, -1)
+
+        if self.gpus_count > 1:
+            y_prediction = nn.parallel.data_parallel(self.proj, y_flat, range(self.gpus_count))
+        else:
+            y_prediction = self.proj(y_flat)
 
         return y_prediction

@@ -16,7 +16,7 @@ class FaderNetTrainer:
 
     def __init__(self, t_params):
         self.t_params = t_params
-        logging.basicConfig(level=logging.DEBUG, format="%(message)s")
+        logging.basicConfig(level=logging.DEBUG)
 
         self.use_cuda = t_params['use_cuda'] and torch.cuda.is_available()
         self.gpus_count = query_available_gpus() if self.use_cuda else 0
@@ -103,18 +103,33 @@ class FaderNetTrainer:
         y = Variable(batch['label'], requires_grad=False)
 
         with torch.no_grad():
+            autoenc_start = time.time()
             z = self.autoenc.encode(x)
+            autoenc_end = time.time()
 
+        discriminator_start = time.time()
         y_predict = self.discrm(z)
+        discriminator_end = time.time()
 
         loss = self.adversarial_loss(y, y_predict)
 
         if mode == 'Training':
             self.discrm_optimizer.zero_grad()
+            backprop_start = time.time()
             loss.backward()  # Backprop
+            backprop_end = time.time()
             if self.gradient_max_norm > 0:
                 clip_grad_norm(self.discrm.parameters(), self.gradient_max_norm)
+            grad_clip_end = time.time()
             self.discrm_optimizer.step()
+            update_step_end = time.time()
+
+            logging.debug('Discrminator step finished: AE(%f ms), D(%f ms), BackProp(%f ms), '
+                          'GradClip(%f ms), Update(%f ms)\n' % ((autoenc_end-autoenc_start) * 1000,
+                                                                (discriminator_end - discriminator_start) * 1000,
+                                                                (backprop_end - backprop_start) * 1000,
+                                                                (grad_clip_end - backprop_end) * 1000,
+                                                                (update_step_end - grad_clip_end)) * 1000)
 
         return loss
 
@@ -130,23 +145,42 @@ class FaderNetTrainer:
         x = Variable(batch['data'], requires_grad=False)
         y = Variable(batch['label'], requires_grad=False)
 
+        autoenc_start = time.time()
         z, x_reconstruct = self.autoenc(x, y)
+        autoenc_end = time.time()
 
         with torch.no_grad():
+            discriminator_start = time.time()
             y_predict = self.discrm(z)
+            discriminator_end = time.time()
 
+        loss_start = time.time()
         adversarial_loss = self.complementary_adversarial_loss(y, y_predict)
         reconstruction_loss = self.reconstruct_loss(x, x_reconstruct)
         loss = reconstruction_loss + self.lambda_e * adversarial_loss
+        loss_end = time.time()
 
         assert not (loss != loss).data.any(), "NaN result in loss function"
 
         if mode == 'Training':
             self.autoenc_optimizer.zero_grad()
+            backprop_start = time.time()
             loss.backward()  # Backprop
+            backprop_end = time.time()
             if self.gradient_max_norm > 0:
                 clip_grad_norm(self.autoenc.parameters(), self.gradient_max_norm)
+            grad_clip_end = time.time()
             self.autoenc_optimizer.step()
+            update_step_end = time.time()
+
+            logging.debug('AutoEncoder step finished: AE(%f ms), D(%f ms), LossCalc(%f ms), BackProp(%f ms), '
+                          'GradClip(%f ms), Update(%f ms)\n' % (
+                          (autoenc_end - autoenc_start) * 1000,
+                          (discriminator_end - discriminator_start) * 1000,
+                          (loss_end - loss_start) * 1000,
+                          (backprop_end - backprop_start) * 1000,
+                          (grad_clip_end - backprop_end) * 1000,
+                          (update_step_end - grad_clip_end)) * 1000)
 
         return loss
 
@@ -166,7 +200,7 @@ class FaderNetTrainer:
             ae_mean_loss += auto_encoder_loss.data[0]
 
             total_iterations += 1
-            if total_iterations % 500 == 0:
+            if total_iterations % 1000 == 0:
                 logging.info('Processed %i iterations', (total_iterations))
 
         d_mean_loss /= len(dataloader)  # Divide by number of samples

@@ -56,7 +56,6 @@ def fetch_remote_dataset(remote_url):
 
 
 def save_labels(labels_array, data_name, batchIndex, target_dir):
-
     tensor_labels = torch.from_numpy(labels_array)
     print("Saving %s-labels to %s ..." % (data_name, os.path.join('.', target_dir)))
 
@@ -66,7 +65,6 @@ def save_labels(labels_array, data_name, batchIndex, target_dir):
 
 
 def save_dataset(data_array, data_name, batchIndex, start_entry, target_dir):
-
     tensor_data = torch.from_numpy(data_array)
     print("Saving %s-dataset to %s ..." % (data_name, os.path.join('.', target_dir)))
 
@@ -78,13 +76,11 @@ def save_dataset(data_array, data_name, batchIndex, start_entry, target_dir):
 
 
 def normalize_dof(yaw, pitch, roll):
-
     yaw_n = float(yaw + 90) / 180
     pitch_n = float(pitch + 90) / 180
     roll_n = float(roll + 90) / 180
 
     return yaw_n, pitch_n, roll_n
-
 
 def extract_data(root_path, batch_index, data_purpose):
     downloads_path = os.path.join(root_path, 'downloads', 'umdfaces_batch')
@@ -95,6 +91,16 @@ def extract_data(root_path, batch_index, data_purpose):
     target_path = os.path.join(root_path, 'dataset', data_purpose.value[0])
     if not os.path.isdir(target_path):
         os.makedirs(target_path)
+
+    target_path_all = os.path.join(target_path, 'all')
+    target_path_decimated = os.path.join(target_path, 'decimated')
+    target_path_enlarged = os.path.join(target_path, 'enlarged')
+    if not os.path.isdir(target_path_all):
+        os.makedirs(target_path_all)
+    if not os.path.isdir(target_path_decimated):
+        os.makedirs(target_path_decimated)
+    if not os.path.isdir(target_path_enlarged):
+        os.makedirs(target_path_enlarged)
 
     annotationsFile = 'umdfaces_batch%i_ultraface.csv' % batch_index
     decimated = []
@@ -141,11 +147,11 @@ def extract_data(root_path, batch_index, data_purpose):
                 all_batch = np.concatenate((decimated_batch, enlarged_batch), axis=0)
 
                 save_dataset(data_array=decimated_batch, start_entry=total_decimated, data_name='decimated',
-                             batchIndex=batch_index, target_dir=target_path)
+                             batchIndex=batch_index, target_dir=target_path_decimated)
                 save_dataset(data_array=enlarged_batch, start_entry=total_enlarged, data_name='enlarged',
-                             batchIndex=batch_index, target_dir=target_path)
+                             batchIndex=batch_index, target_dir=target_path_enlarged)
                 save_dataset(data_array=all_batch, start_entry=total_decimated+total_enlarged, data_name='all',
-                             batchIndex=batch_index, target_dir=target_path)
+                             batchIndex=batch_index, target_dir=target_path_all)
 
                 decimated = []
                 enlarged = []
@@ -156,15 +162,15 @@ def extract_data(root_path, batch_index, data_purpose):
         if decimated:
             decimated_batch = np.concatenate([img_data.transpose((2, 0, 1))[None] for img_data in decimated])
             save_dataset(data_array=decimated_batch, start_entry=total_decimated, data_name='decimated',
-                         batchIndex=batch_index, target_dir=target_path)
+                         batchIndex=batch_index, target_dir=target_path_decimated)
         if enlarged:
             enlarged_batch = np.concatenate([img_data.transpose((2, 0, 1))[None] for img_data in enlarged])
             save_dataset(data_array=enlarged_batch, start_entry=total_enlarged, data_name='enlarged',
-                         batchIndex=batch_index, target_dir=target_path)
+                         batchIndex=batch_index, target_dir=target_path_enlarged)
         if decimated or enlarged:
             all_batch = np.concatenate((decimated_batch, enlarged_batch), axis=0)
             save_dataset(data_array=all_batch, start_entry=total_decimated + total_enlarged, data_name='all',
-                         batchIndex=batch_index, target_dir=target_path)
+                         batchIndex=batch_index, target_dir=target_path_all)
 
         decimated_labels_batch = np.concatenate([label[None] for label in decimated_labels])
         enlarged_labels_batch = np.concatenate([label[None] for label in enlarged_labels])
@@ -174,11 +180,11 @@ def extract_data(root_path, batch_index, data_purpose):
         total_enlarged += len(enlarged_batch)
 
         save_labels(labels_array=decimated_labels_batch, data_name='decimated',
-                    batchIndex=batch_index, target_dir=target_path)
+                    batchIndex=batch_index, target_dir=target_path_decimated)
         save_labels(labels_array=enlarged_labels_batch, data_name='enlarged',
-                    batchIndex=batch_index, target_dir=target_path)
+                    batchIndex=batch_index, target_dir=target_path_enlarged)
         save_labels(labels_array=all_labels_batch, data_name='all',
-                    batchIndex=batch_index, target_dir=target_path)
+                    batchIndex=batch_index, target_dir=target_path_all)
 
     print('Extracted %i enlarged and %i decimated samples. Total of %i' %
           (total_enlarged, total_decimated, total_decimated+total_enlarged))

@@ -3,6 +3,8 @@ import torch
 from torch.utils.data import Dataset
 import random
 import numpy as np
+import time
+import logging
 
 
 class UMDDataset(Dataset):
@@ -74,7 +76,12 @@ class UMDDataset(Dataset):
         if not self.current_batch_range[0] <= idx < self.current_batch_range[1]:
             next_data_entry = next(entry for entry in self.data_files if entry[0] <= idx < entry[1])
             self.current_batch_range = (next_data_entry[0], next_data_entry[1])
+
+            logging.info('Swapping data-batch file to: ' + next_data_entry[2])
+            start = time.time()
             self.current_batch = torch.load(next_data_entry[2])
+            end = time.time()
+            logging.info('Loading completed after ' + '{0:.2f}'.format(end - start) + ' seconds')
 
         x = self.current_batch[idx - self.current_batch_range[0]]
         x = self.normalize_img(x)
