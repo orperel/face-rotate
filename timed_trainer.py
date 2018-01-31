@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
 from torch.autograd import Variable
-from data_loader import UMDDataset
+from data_loader import UMDDataset, SubGroupsRandomSampler
 from plotter import Plotter
 from model import FaderNetAutoencoder, FaderNetDiscriminator
 from utils import clip_grad_norm, query_available_gpus
@@ -16,10 +16,12 @@ class FaderNetTrainer:
 
     def __init__(self, t_params):
         self.t_params = t_params
-        logging.basicConfig(level=logging.DEBUG)
+        logging.basicConfig(level=logging.DEBUG, format="%(message)s")
 
         self.use_cuda = t_params['use_cuda'] and torch.cuda.is_available()
         self.gpus_count = query_available_gpus() if self.use_cuda else 0
+        if t_params['force-gpu-count'] > 0:
+            self.gpus_count = t_params['force-gpu-count']
         if self.gpus_count == 0:
             self.use_cuda = False
 
@@ -200,7 +202,7 @@ class FaderNetTrainer:
             ae_mean_loss += auto_encoder_loss.data[0]
 
             total_iterations += 1
-            if total_iterations % 1000 == 0:
+            if total_iterations % 500 == 0:
                 logging.info('Processed %i iterations', (total_iterations))
 
         d_mean_loss /= len(dataloader)  # Divide by number of samples
@@ -238,9 +240,9 @@ class FaderNetTrainer:
         logging.info(str(len(training_data)) + ' validation samples loaded.')
 
         train_dataloader = DataLoader(training_data, batch_size=self.t_params['batch_size'],
-                                      shuffle=True, num_workers=0)
+                                      shuffle=False, sampler=SubGroupsRandomSampler(training_data), num_workers=0)
         validation_dataloader = DataLoader(validation_data, batch_size=1,
-                                           shuffle=True, num_workers=0)
+                                           shuffle=False, sampler=SubGroupsRandomSampler(validation_data), num_workers=0)
 
         if not os.path.exists(self.t_params['models_path']):
             os.makedirs(self.t_params['models_path'])
