@@ -1,10 +1,27 @@
 import os
 import torch
 from torch.utils.data import Dataset
+from torch.utils.data.sampler import Sampler, BatchSampler
 import random
 import numpy as np
 import time
 import logging
+
+
+class SubGroupsRandomSampler(Sampler):
+
+    def __init__(self, data_source):
+        self.data_source = data_source
+
+    def __iter__(self):
+        perm = np.random.permutation(self.data_source.data_files)
+        for group_file in perm:
+            group_size = int(group_file[1]) - int(group_file[0])
+            for idx in iter(torch.randperm(group_size).long()):
+                yield int(group_file[0]) + idx
+
+    def __len__(self):
+        return len(self.data_source)
 
 
 class UMDDataset(Dataset):

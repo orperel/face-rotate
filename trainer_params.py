@@ -6,6 +6,10 @@ training_params = {
     # General params
     'use_cuda': True,
 
+    # Limit how many GPUs are used, even if more are available.
+    # If 0 is specified the trainer will use all available GPUs.
+    'force-gpu-count': 1,
+
     # Choose the group of data used:
     # - 'enlarged' - faces smaller than 256, scaled up
     # - 'decimated - faces bigger than 256, scaled down
@@ -14,7 +18,7 @@ training_params = {
     'data_group': 'all',
 
     # Location of saved dataset
-    'dataset_path': "/mnt/data/orperel/dataset" + os.path.sep,
+    'dataset_path': "dataset" + os.path.sep,
 
     # Location of saved plots
     'plot_path': "plots" + os.path.sep,
@@ -23,7 +27,7 @@ training_params = {
     'models_path': "models" + os.path.sep,
 
     # SGD parameters
-    'batch_size': 32,
+    'batch_size': 4,
     'epochs': 1000,
 
     # Adam optimizer params
@@ -32,7 +36,7 @@ training_params = {
     'beta2': 0.999,
 
     # Maximum gradient norm, clipping occurs for norms larger than this value. 0 performs no gradient clipping.
-    'gradient_max_norm': 5,
+    'gradient_max_norm': 0,
 
     # This is lambda_e in the paper, when this parameter is higher, more weight is given to the
     # adversarial component of the loss and less to the L2 loss

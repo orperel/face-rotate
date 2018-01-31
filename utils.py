@@ -11,7 +11,7 @@ def query_available_gpus():
 
         for ordinal in range(drv.Device.count()):
             dev = drv.Device(ordinal)
-            logging.info('ID', ordinal, dev.name())
+            logging.info('#' + str(ordinal) + ' ' +  dev.name())
     else:
         logging.info("No GPUs found.")
 

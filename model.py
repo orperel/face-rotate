@@ -25,11 +25,10 @@ class FaderNetAutoencoder(nn.Module):
         neural_net = []
 
         for i in range(num_of_layers):
-            neural_net.append(nn.Sequential(
+            neural_net.extend([
                 nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=4, stride=2, padding=1),
                 nn.BatchNorm2d(num_features=out_channels),
-                nn.LeakyReLU(negative_slope=0.2, inplace=True)
-            ))
+                nn.LeakyReLU(negative_slope=0.2, inplace=True)])
 
             in_channels = out_channels
             out_channels = min(out_channels * 2, MAX_NUM_FEATURES)
