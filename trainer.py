@@ -6,6 +6,7 @@ from torch.autograd import Variable
 from data_loader import UMDDataset
 from plotter import Plotter
 from model import FaderNetAutoencoder, FaderNetDiscriminator
+from utils import clip_grad_norm
 import os
 import time
 
@@ -17,7 +18,7 @@ class FaderNetTrainer:
         self.use_cuda = t_params['use_cuda'] and torch.cuda.is_available()
 
         if t_params['ypr_quant']:
-            attr_dim = 180 * 3
+            attr_dim = t_params['deg_dim'] * 3
             self.adversarial_loss_func = nn.CrossEntropyLoss()
         else:
             attr_dim = 3
@@ -44,6 +45,7 @@ class FaderNetTrainer:
         self.lambda_e = t_params['autoenc_loss_reg_init']
         self.lambda_e_max = t_params['autoenc_loss_reg']
         self.lambda_e_step_size = (self.lambda_e_max - self.lambda_e) / t_params['autoenc_loss_reg_adaption_steps']
+        self.gradient_max_norm = t_params['gradient_max_norm']
 
     def adversarial_loss(self, y, y_predict):
         loss = 0
@@ -102,6 +104,8 @@ class FaderNetTrainer:
         if mode == 'Training':
             self.discrm_optimizer.zero_grad()
             loss.backward()  # Backprop
+            if self.gradient_max_norm > 0:
+                clip_grad_norm(self.discrm.parameters(), self.gradient_max_norm)
             self.discrm_optimizer.step()
 
         return loss
@@ -132,6 +136,8 @@ class FaderNetTrainer:
         if mode == 'Training':
             self.autoenc_optimizer.zero_grad()
             loss.backward()  # Backprop
+            if self.gradient_max_norm > 0:
+                clip_grad_norm(self.autoenc.parameters(), self.gradient_max_norm)
             self.autoenc_optimizer.step()
 
         return loss
@@ -146,6 +152,7 @@ class FaderNetTrainer:
             discriminator_loss = self.discr_iteration(batch, mode)
             auto_encoder_loss = self.autoenc_iteration(batch, mode)
 
+            self.lambda_e = min(self.lambda_e + self.lambda_e_step_size, self.lambda_e_max)
             d_mean_loss += discriminator_loss.data[0]  # Already averaged by #nn_outputs * #batch_size
             ae_mean_loss += auto_encoder_loss.data[0]
 
@@ -165,22 +172,24 @@ class FaderNetTrainer:
             self.discrm.cuda()
             self.autoenc.cuda()
 
-        training_data = UMDDataset(path=os.path.join('dataset', 'training', self.t_params['data_group']),
-                                   ypr_quant=self.ypr_quant,
-                                   deg_dim=self.t_params['deg_dim'],
+        training_set_path = os.path.join(self.t_params['dataset_path'], 'training', self.t_params['data_group'])
+        validation_set_path = os.path.join(self.t_params['dataset_path'], 'validation', self.t_params['data_group'])
+
+        training_data = UMDDataset(path=training_set_path,
+                                   ypr_quant=self.ypr_quant, deg_dim=self.t_params['deg_dim'],
+                                   h_flip_augment=self.t_params['h_flip_augment'],
                                    use_cuda=self.use_cuda)
+        validation_data = UMDDataset(path=validation_set_path, ypr_quant=self.ypr_quant,
+                                     deg_dim=self.t_params['deg_dim'], h_flip_augment=self.t_params['h_flip_augment'],
+                                     use_cuda=self.use_cuda)
+
         train_dataloader = DataLoader(training_data, batch_size=self.t_params['batch_size'],
                                       shuffle=True, num_workers=0)
-
-        validation_data = UMDDataset(path=os.path.join('dataset', 'validation', self.t_params['data_group']),
-                                     ypr_quant = self.ypr_quant,
-                                     deg_dim=self.t_params['deg_dim'],
-                                     use_cuda=self.use_cuda)
         validation_dataloader = DataLoader(validation_data, batch_size=1,
                                            shuffle=True, num_workers=0)
 
         if not os.path.exists(self.t_params['models_path']):
-            os.mkdir(self.t_params['models_path'])
+            os.makedirs(self.t_params['models_path'])
 
         for t in range(self.t_params['epochs']):
 
@@ -192,8 +201,6 @@ class FaderNetTrainer:
             with torch.no_grad():
                 d_mean_loss, ae_mean_loss = self.step_single_epoch(t=t, dataloader=validation_dataloader, mode='Validation')
 
-            self.lambda_e = min(self.lambda_e + self.lambda_e_step_size, self.lambda_e_max)
-
             # Always save best model found in term of minimal loss
             if self.best_discrm_loss > d_mean_loss:
                 self.best_discrm_loss = d_mean_loss
@@ -203,4 +210,6 @@ class FaderNetTrainer:
                 torch.save(self.autoenc, self.t_params['models_path'] + 'autoencoder' + str(t+1) + '.pth')
 
             self.plotter.plot_losses(window='Loss')
+            torch.save(self.discrm, self.t_params['models_path'] + 'last_discriminator.pth')
+            torch.save(self.autoenc, self.t_params['models_path'] + 'last_autoencoder.pth')
             torch.save(self, self.t_params['models_path'] + 'last_trainer_state.pth')

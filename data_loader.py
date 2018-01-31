@@ -1,11 +1,13 @@
 import os
 import torch
 from torch.utils.data import Dataset
+import random
+import numpy as np
 
 
 class UMDDataset(Dataset):
 
-    def __init__(self, path, ypr_quant, deg_dim, use_cuda):
+    def __init__(self, path, ypr_quant, deg_dim, h_flip_augment, use_cuda):
 
         assert not ypr_quant or (180 % deg_dim == 0), \
             "Invalid deg_dim parameter defined for trainer params: %r" % deg_dim
@@ -13,6 +15,7 @@ class UMDDataset(Dataset):
         self.ypr_quant = ypr_quant
         self.deg_dim = deg_dim
         self.deg_dim_quant = 180 / deg_dim  # How much quantization should be applied
+        self.h_flip_augment = h_flip_augment
         self.use_cuda = use_cuda
         self.data_files = []
         self.labels = None
@@ -56,9 +59,15 @@ class UMDDataset(Dataset):
 
     @staticmethod
     def to_one_hot(y, dof=180, dof_quant=1):
-        y_tensor = y.div_(dof_quant).type(torch.LongTensor).view(-1, 1)
+        y_tensor = y.div(dof_quant).type(torch.LongTensor).view(-1, 1)
         y_one_hot = torch.zeros(y_tensor.size()[0], dof).scatter_(1, y_tensor, 1)
         return y_one_hot.view(-1)
+
+    @staticmethod
+    def flip_horizontally(x, y):
+        x = x.index_select(2, torch.arange(x.size(2) - 1, -1, -1).long())
+        y = torch.FloatTensor(np.array([1.0 - y[0], y[1], 1.0-y[2]]))
+        return x,y
 
     def __getitem__(self, idx):
         # Load next batch if needed
@@ -70,9 +79,12 @@ class UMDDataset(Dataset):
         x = self.current_batch[idx - self.current_batch_range[0]]
         x = self.normalize_img(x)
         y = self.labels[idx]
-        y = self.normalize_angles(y)
+
+        if self.h_flip_augment and random.random() >= 0.5:
+            x, y = self.flip_horizontally(x, y)
 
         if self.ypr_quant:
+            y = self.normalize_angles(y)
             y = self.to_one_hot(y, self.deg_dim, self.deg_dim_quant)
 
         if self.use_cuda:

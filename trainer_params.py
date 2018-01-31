@@ -13,6 +13,9 @@ training_params = {
     # - 'debug' - small set for debug purposes
     'data_group': 'debug',
 
+    # Location of saved dataset
+    'dataset_path': "dataset" + os.path.sep,
+
     # Location of saved plots
     'plot_path': "plots" + os.path.sep,
 
@@ -27,6 +30,9 @@ training_params = {
     'learning_rate': 0.002,
     'beta1': 0.5,
     'beta2': 0.999,
+
+    # Maximum gradient norm, clipping occurs for norms larger than this value. 0 performs no gradient clipping.
+    'gradient_max_norm': 5,
 
     # This is lambda_e in the paper, when this parameter is higher, more weight is given to the
     # adversarial component of the loss and less to the L2 loss
@@ -49,7 +55,11 @@ training_params = {
     # Determines how many dimensions the one-hot-vector representation of yaw-pitch-roll should contain.
     # The value should divide 180 without residuals.
     # --Used only if ypr_quant is True.
-    'deg_dim': 180,
+    'deg_dim': 45,
+
+    # When true, a random chance of 0.5 is applied to flip images horizontally.
+    # Yaw, Roll labels are updated accordingly.
+    'h_flip_augment': True
 }
 
 trainer = FaderNetTrainer(training_params)
