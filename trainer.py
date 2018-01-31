@@ -52,6 +52,11 @@ class FaderNetTrainer:
         self.best_discrm_loss = float("inf")
         self.best_autoenc_loss = float("inf")
 
+        if self.t_params['training_samples_per_epoch'] == 0:
+            self.t_params['training_samples_per_epoch'] = 2**32
+        if self.t_params['validation_samples_per_epoch'] == 0:
+            self.t_params['validation_samples_per_epoch'] = 2**32
+
         self.lambda_e = t_params['autoenc_loss_reg_init']
         self.lambda_e_max = t_params['autoenc_loss_reg']
         self.lambda_e_step_size = (self.lambda_e_max - self.lambda_e) / t_params['autoenc_loss_reg_adaption_steps']
@@ -152,7 +157,7 @@ class FaderNetTrainer:
 
         return loss
 
-    def step_single_epoch(self, t, dataloader, mode):
+    def step_single_epoch(self, t, dataloader, mode, max_samples):
 
         start = time.time()
         total_iterations = 0
@@ -170,11 +175,13 @@ class FaderNetTrainer:
             total_iterations += 1
             if total_iterations % 500 == 0:
                 logging.info('Processed %i iterations', (total_iterations))
+            if total_iterations*self.t_params['batch_size'] >= max_samples:
+                break
 
         d_mean_loss /= len(dataloader)  # Divide by number of samples
         ae_mean_loss /= len(dataloader)  # Divide by number of samples
-        self.plotter.update_loss_plot_data(mode='Discriminator ' + mode, new_epoch=(t + 1), new_loss=d_mean_loss)
-        self.plotter.update_loss_plot_data(mode='AutoEncoder ' + mode, new_epoch=(t + 1), new_loss=ae_mean_loss)
+        self.plotter.update_loss_plot_data(network='Discriminator', mode=mode, new_epoch=(t + 1), new_loss=d_mean_loss)
+        self.plotter.update_loss_plot_data(network='AutoEncoder', mode=mode, new_epoch=(t + 1), new_loss=ae_mean_loss)
 
         end = time.time()
         logging.info(mode + ' took ' + "{0:.2f}".format(end - start) + ' seconds')
@@ -203,7 +210,7 @@ class FaderNetTrainer:
         validation_data = UMDDataset(path=validation_set_path, ypr_quant=self.ypr_quant,
                                      deg_dim=self.t_params['deg_dim'], h_flip_augment=self.t_params['h_flip_augment'],
                                      use_cuda=self.use_cuda)
-        logging.info(str(len(training_data)) + ' validation samples loaded.')
+        logging.info(str(len(validation_data)) + ' validation samples loaded.')
 
         train_dataloader = DataLoader(training_data, batch_size=self.t_params['batch_size'],
                                       shuffle=False, sampler=SubGroupsRandomSampler(training_data), num_workers=0)
@@ -218,10 +225,12 @@ class FaderNetTrainer:
             self.total_epochs = t
             logging.info('Starting epoch #' + str(t + 1))
 
-            self.step_single_epoch(t=t, dataloader=train_dataloader, mode='Training')
+            self.step_single_epoch(t=t, dataloader=train_dataloader, mode='Training',
+                                   max_samples=self.t_params['training_samples_per_epoch'])
 
             with torch.no_grad():
-                d_mean_loss, ae_mean_loss = self.step_single_epoch(t=t, dataloader=validation_dataloader, mode='Validation')
+                d_mean_loss, ae_mean_loss = self.step_single_epoch(t=t, dataloader=validation_dataloader, mode='Validation',
+                                                                   max_samples=self.t_params['training_samples_per_epoch'])
 
             # Always save best model found in term of minimal loss
             if self.best_discrm_loss > d_mean_loss:
@@ -231,7 +240,7 @@ class FaderNetTrainer:
                 self.best_autoenc_loss = ae_mean_loss
                 torch.save(self.autoenc, self.t_params['models_path'] + 'autoencoder' + str(t+1) + '.pth')
 
-            self.plotter.plot_losses(window='Loss')
+            self.plotter.plot_losses(window='Losses')
             torch.save(self.discrm, self.t_params['models_path'] + 'last_discriminator.pth')
             torch.save(self.autoenc, self.t_params['models_path'] + 'last_autoencoder.pth')
             torch.save(self, self.t_params['models_path'] + 'last_trainer_state.pth')

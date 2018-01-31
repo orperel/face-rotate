@@ -8,6 +8,7 @@ training_params = {
 
     # Limit how many GPUs are used, even if more are available.
     # If 0 is specified the trainer will use all available GPUs.
+    # --NOTE--: Multiple GPUs processing does not improve performance at the moment.
     'force-gpu-count': 1,
 
     # Choose the group of data used:
@@ -27,8 +28,12 @@ training_params = {
     'models_path': "models" + os.path.sep,
 
     # SGD parameters
-    'batch_size': 4,
-    'epochs': 1000,
+    'batch_size': 32,
+    'epochs': 4000,
+
+    # Number of samples per epoch - set 0 for no maximum
+    'training_samples_per_epoch': 50000,
+    'validation_samples_per_epoch': 35000,
 
     # Adam optimizer params
     'learning_rate': 0.002,

@@ -37,21 +37,30 @@ class Plotter:
         self.vis = visdom.Visdom()
         self.colors = ['blue', 'red', 'green', 'yellow', 'orange', 'pink', 'brown']
 
-    def update_loss_plot_data(self, mode, new_epoch, new_loss):
-
-        if mode not in self.loss_plot_data:
+    def update_loss_plot_data(self, network, mode, new_epoch, new_loss):
+        if network not in self.loss_plot_data:
+            self.loss_plot_data[network] = {}
+        if mode not in self.loss_plot_data[network]:
             color = self.colors[self.last_color_ptr]
             self.last_color_ptr += 1
-            self.loss_plot_data[mode] = {'losses': [], 'epochs': [], 'name': mode, 'color': color}
+            self.loss_plot_data[network][mode] = {'losses': [], 'epochs': [], 'name': network + ' ' + mode, 'color': color}
 
-        self.loss_plot_data[mode]['epochs'].append(new_epoch)
-        self.loss_plot_data[mode]['losses'].append(new_loss)
+        self.loss_plot_data[network][mode]['epochs'].append(new_epoch)
+        self.loss_plot_data[network][mode]['losses'].append(new_loss)
 
     def plot_losses(self, window):
         traces = []
-        for name, data in self.loss_plot_data.items():
-            new_trace = dict(x=data['epochs'], y=data['losses'], mode="lines", type='custom',
-                             marker={'color': data['color']}, name=data['name'])
-            traces.append(new_trace)
+        network_traces = {}
+        for network in self.loss_plot_data.keys():
+            network_traces[network] = []
+            for mode, data in self.loss_plot_data[network].items():
+                new_trace = dict(x=data['epochs'], y=data['losses'], mode="lines", type='custom',
+                                 marker={'color': data['color']}, name=data['name'])
+                traces.append(new_trace)
+                network_traces[network].append(new_trace)
+
         layout = dict(title="Loss", xaxis={'title': 'Epoch [#]'}, yaxis={'title': 'Loss'})
         self.vis._send({'data': traces, 'layout': layout, 'win': window})
+        for network in network_traces:
+            layout = dict(title=network + " Loss", xaxis={'title': 'Epoch [#]'}, yaxis={'title': 'Loss'})
+            self.vis._send({'data': network_traces[network], 'layout': layout, 'win': network + ' Losses'})
