@@ -11,10 +11,10 @@ training_params = {
     # - 'decimated - faces bigger than 256, scaled down
     # - 'all' - use entire dataset regardless of size
     # - 'debug' - small set for debug purposes
-    'data_group': 'debug',
+    'data_group': 'all',
 
     # Location of saved dataset
-    'dataset_path': "dataset" + os.path.sep,
+    'dataset_path': "/mnt/data/orperel/dataset" + os.path.sep,
 
     # Location of saved plots
     'plot_path': "plots" + os.path.sep,
@@ -23,7 +23,7 @@ training_params = {
     'models_path': "models" + os.path.sep,
 
     # SGD parameters
-    'batch_size': 4,
+    'batch_size': 32,
     'epochs': 1000,
 
     # Adam optimizer params
@@ -59,7 +59,7 @@ training_params = {
 
     # When true, a random chance of 0.5 is applied to flip images horizontally.
     # Yaw, Roll labels are updated accordingly.
-    'h_flip_augment': True
+    'h_flip_augment': False
 }
 
 trainer = FaderNetTrainer(training_params)

@@ -213,3 +213,5 @@ class FaderNetTrainer:
             torch.save(self.discrm, self.t_params['models_path'] + 'last_discriminator.pth')
             torch.save(self.autoenc, self.t_params['models_path'] + 'last_autoencoder.pth')
             torch.save(self, self.t_params['models_path'] + 'last_trainer_state.pth')
+
+        print('Training ended. Terminating gracefully..')
