@@ -7,6 +7,7 @@ from torch.autograd import Variable
 import numpy as np
 
 use_cuda = False
+g_dof = 45
 
 def denormalize_img(x):
     return x.add(1).div_(2)
@@ -37,10 +38,10 @@ def show_random_samples():
 
     data_group_type = 'validation'
     data_group_zoom = 'debug'
-    autoenc_model_path = os.path.join('models', 'autoencoder25.pth')
+    autoenc_model_path = os.path.join('models', 'last_autoencoder.pth')
 
     data = UMDDataset(path=os.path.join('dataset', data_group_type, data_group_zoom),
-                      ypr_quant=True, deg_dim=180, h_flip_augment=False, use_cuda=use_cuda)
+                      ypr_quant=True, deg_dim=g_dof, h_flip_augment=False, use_cuda=use_cuda)
     dataloader = DataLoader(data, batch_size=1, shuffle=True, num_workers=0)
 
     with torch.no_grad():
@@ -61,11 +62,13 @@ def show_random_samples():
             reconstructed_face = autoenc(x, y)
             show_img_var(x.data, fig, 1, 'Ground Truth')
             show_img_var(reconstructed_face[1].data, fig, 2, 'Reconstruction')
-            altered_y = Variable(gen_one_hot(yaw=45, pitch=0, roll=0))
+            altered_y = Variable(gen_one_hot(yaw=0//(180//g_dof), pitch=0, roll=0, dof=g_dof, dof_quant=180//g_dof))
             rotated_face = autoenc(x, altered_y)
-            show_img_var(rotated_face[1].data, fig, 3, '(45,0,0) Rotation')
+            show_img_var(rotated_face[1].data, fig, 3, '(0,0,0) Rotation')
 
             plt.show()
 
 
-show_random_samples()
+def report_status_to_visdom(model, plot):
+    plotter = torch.load(plot)
+    plotter.plot_losses(window='Losses')

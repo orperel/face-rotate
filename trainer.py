@@ -16,7 +16,6 @@ class FaderNetTrainer:
 
     def __init__(self, t_params):
         self.t_params = t_params
-        logging.basicConfig(level=logging.DEBUG, format="%(message)s")
 
         self.use_cuda = t_params['use_cuda'] and torch.cuda.is_available()
         self.gpus_count = query_available_gpus() if self.use_cuda else 0
@@ -221,7 +220,7 @@ class FaderNetTrainer:
         if not os.path.exists(self.t_params['models_path']):
             os.makedirs(self.t_params['models_path'])
 
-        for t in range(self.t_params['epochs']):
+        for t in range(self.total_epochs, self.t_params['epochs']):
 
             self.total_epochs = t
             logging.info('Starting epoch #' + str(t + 1))
@@ -245,5 +244,43 @@ class FaderNetTrainer:
             torch.save(self.discrm, self.t_params['models_path'] + 'last_discriminator.pth')
             torch.save(self.autoenc, self.t_params['models_path'] + 'last_autoencoder.pth')
             torch.save(self.plotter, self.t_params['plot_path'] + 'last_plot.pth')
+            torch.save(self, self.t_params['models_path'] + 'last_trainer_state.pth')
 
         logging.info('Training ended. Terminating gracefully..')
+
+    @staticmethod
+    def continue_training(last_trainer_state_path, with_params):
+
+        last_trainer_state = os.path.join(last_trainer_state_path + 'last_trainer_state.pth')
+        logging.info('Loading last trainer state in ' + last_trainer_state)
+        trainer = torch.load(last_trainer_state)
+
+        if with_params is not None:
+            trainer.t_params = with_params
+            trainer.use_cuda = with_params['use_cuda'] and torch.cuda.is_available()
+            trainer.gpus_count = query_available_gpus() if trainer.use_cuda else 0
+            if with_params['force-gpu-count'] > 0:
+                trainer.gpus_count = with_params['force-gpu-count']
+            if trainer.gpus_count == 0:
+                trainer.use_cuda = False
+
+            if trainer.t_params['training_samples_per_epoch'] == 0:
+                trainer.t_params['training_samples_per_epoch'] = 2 ** 32
+            if trainer.t_params['validation_samples_per_epoch'] == 0:
+                trainer.t_params['validation_samples_per_epoch'] = 2 ** 32
+
+            trainer.lambda_e_max = with_params['autoenc_loss_reg']
+            trainer.lambda_e_step_size = (trainer.lambda_e_max - trainer.lambda_e) / with_params['autoenc_loss_reg_adaption_steps']
+            trainer.gradient_max_norm = with_params['gradient_max_norm']
+
+        params_state_title = 'original parameters.' if with_params is None else 'new trainer_params.'
+        logging.info('Continuing experiment from epoch #%i with ' % (trainer.total_epochs+1) + params_state_title)
+        logging.info('============Parameters:============')
+
+        for key, value in trainer.t_params.items():
+            logging.info(str(key) + ': ' + str(value))
+
+        logging.info('===================================')
+
+        trainer.train()
+
