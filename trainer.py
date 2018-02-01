@@ -178,8 +178,9 @@ class FaderNetTrainer:
             if total_iterations*self.t_params['batch_size'] >= max_samples:
                 break
 
-        d_mean_loss /= len(dataloader)  # Divide by number of samples
-        ae_mean_loss /= len(dataloader)  # Divide by number of samples
+        processed_samples_count = total_iterations*self.t_params['batch_size']
+        d_mean_loss /= processed_samples_count  # Divide by number of samples
+        ae_mean_loss /= processed_samples_count  # Divide by number of samples
         self.plotter.update_loss_plot_data(network='Discriminator', mode=mode, new_epoch=(t + 1), new_loss=d_mean_loss)
         self.plotter.update_loss_plot_data(network='AutoEncoder', mode=mode, new_epoch=(t + 1), new_loss=ae_mean_loss)
 
