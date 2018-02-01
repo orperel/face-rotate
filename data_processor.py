@@ -17,8 +17,8 @@ data_root = '/mnt/data/orperel'  # Where should the dataset be downloaded / extr
 
 
 class DataPurpose(Enum):
-    TRAINING = 'training',
-    VALIDATION = 'validation',
+    TRAINING = 'training'
+    VALIDATION = 'validation'
     TEST = 'test'
 
 
@@ -88,7 +88,7 @@ def extract_data(root_path, batch_index, data_purpose):
     downloads_path = os.path.join(downloads_path, 'umdfaces_batch' + str(batch_index))
     assert os.path.isdir(downloads_path), "Invalid downloads_path supplied for UMDFaces dataset: %r" % downloads_path
 
-    target_path = os.path.join(root_path, 'dataset', data_purpose.value[0])
+    target_path = os.path.join(root_path, 'dataset', data_purpose.value)
     if not os.path.isdir(target_path):
         os.makedirs(target_path)
 
