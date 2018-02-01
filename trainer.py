@@ -90,7 +90,7 @@ class FaderNetTrainer:
                 y_target = y[:, angle_idx:angle_idx+degs_dim].max(1)[1]  # Index of target degree
                 delta = torch.LongTensor(batch_size).random_(degs_dim - 1) + 1
                 if self.use_cuda:
-                    delta = delta.cuda()
+                    delta = delta.cuda(async=True)
                 y_target = (y_target + Variable(delta)) % degs_dim
                 y_predict_target = y_predict[:, angle_idx:angle_idx+degs_dim]
                 loss = loss + self.adversarial_loss_func(y_predict_target, y_target)
@@ -115,6 +115,10 @@ class FaderNetTrainer:
 
         x = Variable(batch['data'], requires_grad=False)
         y = Variable(batch['label'], requires_grad=False)
+
+        if self.use_cuda:
+            x = x.cuda(async=True)
+            y = y.cuda(async=True)
 
         with torch.no_grad():
             z = self.autoenc.encode(x)
@@ -143,6 +147,10 @@ class FaderNetTrainer:
 
         x = Variable(batch['data'], requires_grad=False)
         y = Variable(batch['label'], requires_grad=False)
+
+        if self.use_cuda:
+            x = x.cuda(async=True)
+            y = y.cuda(async=True)
 
         z, x_reconstruct = self.autoenc(x, y)
 
@@ -226,10 +234,10 @@ class FaderNetTrainer:
 
         train_dataloader = DataLoader(training_data, batch_size=self.t_params['batch_size'],
                                       shuffle=False, sampler=SubGroupsRandomSampler(training_data), num_workers=0,
-                                      pin_memory=False)
+                                      pin_memory=True)
         validation_dataloader = DataLoader(validation_data, batch_size=1,
                                            shuffle=False, sampler=SubGroupsRandomSampler(validation_data), num_workers=0,
-                                           pin_memory=False)
+                                           pin_memory=True)
 
         if not os.path.exists(self.t_params['models_path']):
             os.makedirs(self.t_params['models_path'])

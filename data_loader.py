@@ -112,9 +112,9 @@ class UMDDataset(Dataset):
             y_onehot = self.to_one_hot(y_onehot, self.deg_dim, self.deg_dim_quant)
             y = torch.cat((y, y_onehot)) if self.ypr_regress else y_onehot   # Concat with regress or take over
 
-        if self.use_cuda:
-            x = x.cuda()
-            y = y.cuda()
+        # if self.use_cuda:
+        #     x = x.cuda()
+        #     y = y.cuda()
 
         return {'data': x, 'label': y}
 
