@@ -77,9 +77,15 @@ class UMDDataset(Dataset):
 
     @staticmethod
     def to_one_hot(y, dof=180, dof_quant=1):
-        y_tensor = y.div(dof_quant).type(torch.LongTensor).view(-1, 1)
-        y_one_hot = torch.zeros(y_tensor.size()[0], dof).scatter_(1, y_tensor, 1)
-        return y_one_hot.view(-1)
+        try:
+            y_tensor = y.div(dof_quant).type(torch.LongTensor).view(-1, 1)
+            y_one_hot = torch.zeros(y_tensor.size()[0], dof).scatter_(1, y_tensor, 1)
+            return y_one_hot.view(-1)
+        except RuntimeError:
+            logging.error(
+                'The following parameters caused an error: ' + 'Y Size: ' + str(y_tensor.size()) + '\n' + 'dof: ' + str(
+                    dof) + '\n')
+            logging.error('y_tensor is: ' + str(y_tensor))
 
     @staticmethod
     def flip_horizontally(x, y):

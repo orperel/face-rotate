@@ -173,7 +173,7 @@ class FaderNetTrainer:
             ae_mean_loss += auto_encoder_loss.data[0]
 
             total_iterations += 1
-            if total_iterations % 500 == 0:
+            if total_iterations % 100 == 0:
                 logging.info('Processed %i iterations', (total_iterations))
             if total_iterations*self.t_params['batch_size'] >= max_samples:
                 break
