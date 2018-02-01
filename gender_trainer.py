@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
 from torch.autograd import Variable
-from data_loader import UMDDataset, SubGroupsRandomSampler
+from gender_data_loader import UMDDataset, SubGroupsRandomSampler
 from plotter import Plotter
 from model import FaderNetAutoencoder, FaderNetDiscriminator
 from utils import clip_grad_norm, query_available_gpus
@@ -12,7 +12,7 @@ import time
 import logging
 
 
-class FaderNetTrainer:
+class GenderFaderNetTrainer:
 
     def __init__(self, t_params):
         self.t_params = t_params
@@ -24,17 +24,8 @@ class FaderNetTrainer:
         if self.gpus_count == 0:
             self.use_cuda = False
 
-        attr_dim = 0
-        if t_params['ypr_quant']:
-            attr_dim += t_params['deg_dim'] * 3
-            self.adversarial_loss_func = nn.CrossEntropyLoss()
-        if t_params['ypr_regress']:
-            attr_dim += 3
-            self.adversarial_loss_func_regress = nn.MSELoss()
-            self.max_regress_loss = torch.FloatTensor(3).fill_(180 ** 2)
-            if self.use_cuda:
-                self.max_regress_loss = self.max_regress_loss.cuda()
-
+        attr_dim = 2
+        self.adversarial_loss_func = nn.CrossEntropyLoss()
         self.reconstruction_loss_func = nn.MSELoss()
 
         self.autoenc = FaderNetAutoencoder(num_of_layers=t_params['autoenc_layer_count'], attr_dim=attr_dim,
@@ -64,40 +55,22 @@ class FaderNetTrainer:
         self.gradient_max_norm = t_params['gradient_max_norm']
 
     def adversarial_loss(self, y, y_predict):
-        loss = 0
-        if self.ypr_quant:
-            degs_dim = self.t_params['deg_dim']
-            one_hot_start = 3 if self.ypr_regress else 0
-            for angle_idx in range(one_hot_start, 3*degs_dim, degs_dim):
-                y_target = y[:, angle_idx:angle_idx+degs_dim].max(1)[1] # Index of target degree
-                y_predict_target = y_predict[:, angle_idx:angle_idx+degs_dim]
-                loss = loss + self.adversarial_loss_func(y_predict_target, y_target)
-        if self.ypr_regress:
-            for angle_idx in range(3):
-                mse = self.adversarial_loss_func_regress(y_predict[:, angle_idx], y[:, angle_idx])
-                loss = loss - (torch.log(1 - mse) * self.t_params['ypr_regress_weight'])
-
+        y_target = y.max(1)[1] # Index of target degree
+        y_predict_target = y_predict
+        loss = self.adversarial_loss_func(y_predict_target, y_target)
         return loss
 
     def complementary_adversarial_loss(self, y, y_predict):
-        loss = 0
-        if self.ypr_quant:
-            batch_size = y.size()[0]
-            degs_dim = self.t_params['deg_dim']
-            one_hot_start = 3 if self.ypr_regress else 0
+        batch_size = y.size()[0]
+        degs_dim = self.t_params['deg_dim']
 
-            for angle_idx in range(one_hot_start, 3*degs_dim, degs_dim):
-                y_target = y[:, angle_idx:angle_idx+degs_dim].max(1)[1]  # Index of target degree
-                delta = torch.LongTensor(batch_size).random_(degs_dim - 1) + 1
-                if self.use_cuda:
-                    delta = delta.cuda()
-                y_target = (y_target + Variable(delta)) % degs_dim
-                y_predict_target = y_predict[:, angle_idx:angle_idx+degs_dim]
-                loss = loss + self.adversarial_loss_func(y_predict_target, y_target)
-        else:
-            for angle_idx in range(3):
-                mse = self.adversarial_loss_func_regress(y_predict[:, angle_idx], y[:, angle_idx])
-                loss = loss - (torch.log(mse) * self.t_params['ypr_regress_weight'])
+        y_target = y.max(1)[1]  # Index of target degree
+        delta = torch.LongTensor(batch_size).random_(degs_dim - 1) + 1
+        if self.use_cuda:
+            delta = delta.cuda()
+        y_target = (y_target + Variable(delta)) % degs_dim
+        y_predict_target = y_predict
+        loss = self.adversarial_loss_func(y_predict_target, y_target)
 
         return loss
 

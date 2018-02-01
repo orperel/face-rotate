@@ -1,12 +1,18 @@
 import argparse
 import logging
 from trainer import FaderNetTrainer
+from gender_trainer import GenderFaderNetTrainer
 from trainer_params import training_params
 from evaluator import report_status_to_visdom, show_random_samples
 
 
 def begin_training():
     trainer = FaderNetTrainer(training_params)
+    trainer.train()
+
+
+def begin_training_gender():
+    trainer = GenderFaderNetTrainer(training_params)
     trainer.train()
 
 
@@ -34,5 +40,7 @@ elif args.run == 'continue':
     continue_training(flush_params)
 elif args.run == 'eval':
     evaluate()
+elif args.run == 'gender':
+    begin_training_gender()
 else:
     print('Usage: ' + description)
