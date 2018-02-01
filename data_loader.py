@@ -14,10 +14,9 @@ class SubGroupsRandomSampler(Sampler):
         self.data_source = data_source
 
     def __iter__(self):
-        perm = np.random.permutation(self.data_source.data_files)
-        for group_file in perm:
+        for group_file in np.random.permutation(self.data_source.data_files):
             group_size = int(group_file[1]) - int(group_file[0])
-            for idx in iter(torch.randperm(group_size).long()):
+            for idx in np.random.permutation(group_size):
                 yield int(group_file[0]) + idx
 
     def __len__(self):
