@@ -27,7 +27,7 @@ training_params = {
     'models_path': "models" + os.path.sep,
 
     # SGD parameters
-    'batch_size': 4,
+    'batch_size': 32,
     'epochs': 4000,
 
     # Number of samples per epoch - set 0 for no maximum
@@ -50,7 +50,7 @@ training_params = {
     'autoenc_loss_reg_init': 0,
 
     # Number of SGD iterations required for lambda_e to reach it's final value
-    'autoenc_loss_reg_adaption_steps': 200000,  # Originally: 500000,
+    'autoenc_loss_reg_adaption_steps': 500000,  # Originally: 500000,
 
     # Number of convolution layers in encoder / decoder
     'autoenc_layer_count': 7,
