@@ -243,6 +243,6 @@ class FaderNetTrainer:
             self.plotter.plot_losses(window='Losses')
             torch.save(self.discrm, self.t_params['models_path'] + 'last_discriminator.pth')
             torch.save(self.autoenc, self.t_params['models_path'] + 'last_autoencoder.pth')
-            torch.save(self, self.t_params['models_path'] + 'last_trainer_state.pth')
+            torch.save(self.plotter, self.t_params['plot_path'] + 'last_plot.pth')
 
         logging.info('Training ended. Terminating gracefully..')
