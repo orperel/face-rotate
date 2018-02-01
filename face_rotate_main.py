@@ -16,7 +16,7 @@ def continue_training(flush_params):
 
 
 def evaluate():
-    report_status_to_visdom(None, training_params['plot_path'] + 'last_plot.pth')
+    report_status_to_visdom(training_params['plot_path'] + 'last_plot.pth')
     show_random_samples()
 
 

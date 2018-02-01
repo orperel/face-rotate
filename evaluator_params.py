@@ -1,6 +1,6 @@
 import os
 
-training_params = {
+evaluating_params = {
 
     # General params
     'use_cuda': True,
@@ -10,12 +10,15 @@ training_params = {
     # --NOTE--: Multiple GPUs processing does not improve performance at the moment.
     'force-gpu-count': 1,
 
+    # Training, Validation, Test..
+    'data_type': 'validation',
+
     # Choose the group of data used:
     # - 'enlarged' - faces smaller than 256, scaled up
     # - 'decimated - faces bigger than 256, scaled down
     # - 'all' - use entire dataset regardless of size
     # - 'debug' - small set for debug purposes
-    'data_group': 'all',
+    'data_group': 'debug',
 
     # Location of saved dataset
     'dataset_path': "dataset" + os.path.sep,
@@ -26,38 +29,9 @@ training_params = {
     # Location of output saved models
     'models_path': "models" + os.path.sep,
 
-    # SGD parameters
-    'batch_size': 64,
-    'epochs': 4000,
-
-    # Number of samples per epoch - set 0 for no maximum
-    'training_samples_per_epoch': 50000,
-    'validation_samples_per_epoch': 50000,
-
-    # Adam optimizer params
-    'learning_rate': 0.002,  # Originally: 0.002,
-    'beta1': 0.5,
-    'beta2': 0.999,
-
-    # Maximum gradient norm, clipping occurs for norms larger than this value. 0 performs no gradient clipping.
-    'gradient_max_norm': 5,
-
-    # This is lambda_e in the paper, when this parameter is higher, more weight is given to the
-    # adversarial component of the loss and less to the L2 loss
-    'autoenc_loss_reg': 0.0001,
-
-    # The initial value for lambda_e
-    'autoenc_loss_reg_init': 0,
-
-    # Number of SGD iterations required for lambda_e to reach it's final value
-    'autoenc_loss_reg_adaption_steps': 200000,  # Originally: 500000,
-
-    # Number of convolution layers in encoder / decoder
-    'autoenc_layer_count': 7,
-
     # If true, the cross-entropy component is added to the AutoEndoer & Discriminator losses.
     # Rotation degrees are treated as discreet one hot vectors with log loss.
-    'ypr_quant': False,
+    'ypr_quant': True,
 
     # Determines how many dimensions the one-hot-vector representation of yaw-pitch-roll should contain.
     # The value should divide 180 without residuals.
@@ -70,10 +44,6 @@ training_params = {
     # For the auto-encoder: loss = loss - log(|| deg - deg_predict || **2)
     # Where deg, deg_predict are one dimensional vectors with [batch_size] dimensions
     'ypr_regress': True,
-
-    # A multiplier for the ypr_regress loss component, to make sure it has the same order of magnitude as
-    # the cross entropy component
-    'ypr_regress_weight': 5,
 
     # When true, a random chance of 0.5 is applied to flip images horizontally.
     # Yaw, Roll labels are updated accordingly.
