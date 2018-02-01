@@ -115,9 +115,6 @@ class FaderNetDiscriminator(nn.Module):
         y_prediction = self.c512(z)
         y_flat = y_prediction.view(batch_size, -1)
 
-        if self.gpus_count > 1:
-            y_prediction = nn.parallel.data_parallel(self.proj, y_flat, range(self.gpus_count))
-        else:
-            y_prediction = self.proj(y_flat)
+        y_prediction = self.proj(y_flat)
 
         return y_prediction

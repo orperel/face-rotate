@@ -6,7 +6,7 @@ from torch.autograd import Variable
 from data_loader import UMDDataset, SubGroupsRandomSampler
 from plotter import Plotter
 from model import FaderNetAutoencoder, FaderNetDiscriminator
-from utils import clip_grad_norm, query_available_gpus
+from utils import query_available_gpus
 import os
 import time
 import logging
@@ -131,7 +131,7 @@ class FaderNetTrainer:
             self.discrm_optimizer.zero_grad()
             loss.backward()  # Backprop
             if self.gradient_max_norm > 0:
-                clip_grad_norm(self.discrm.parameters(), self.gradient_max_norm)
+                nn.utils.clip_grad_norm(self.discrm.parameters(), self.gradient_max_norm)
             self.discrm_optimizer.step()
 
         return loss
@@ -167,7 +167,7 @@ class FaderNetTrainer:
             self.autoenc_optimizer.zero_grad()
             loss.backward()  # Backprop
             if self.gradient_max_norm > 0:
-                clip_grad_norm(self.autoenc.parameters(), self.gradient_max_norm)
+                nn.utils.clip_grad_norm(self.autoenc.parameters(), self.gradient_max_norm)
             self.autoenc_optimizer.step()
 
         return loss
@@ -217,6 +217,8 @@ class FaderNetTrainer:
         else:
             self.discrm = self.discrm.cpu()
             self.autoenc = self.autoenc.cpu()
+
+        torch.backends.cudnn.benchmark = True
 
         training_set_path = os.path.join(self.t_params['dataset_path'], 'training', self.t_params['data_group'])
         validation_set_path = os.path.join(self.t_params['dataset_path'], 'validation', self.t_params['data_group'])
