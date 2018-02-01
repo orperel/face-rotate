@@ -41,7 +41,7 @@ def show_random_samples():
     autoenc_model_path = os.path.join('models', 'last_autoencoder.pth')
 
     data = UMDDataset(path=os.path.join('dataset', data_group_type, data_group_zoom),
-                      ypr_quant=True, deg_dim=g_dof, h_flip_augment=False, use_cuda=use_cuda)
+                      ypr_quant=True, deg_dim=g_dof, ypr_regress=False, h_flip_augment=False, use_cuda=use_cuda)
     dataloader = DataLoader(data, batch_size=1, shuffle=True, num_workers=0)
 
     with torch.no_grad():
@@ -55,7 +55,7 @@ def show_random_samples():
         for batch in dataloader:
 
             x = Variable(batch['data'])
-            y = Variable(batch['label'])
+            y = Variable(batch['label_onehot'])
 
             fig = plt.figure()
 

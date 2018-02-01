@@ -1,7 +1,7 @@
 import os
 import torch
 from torch.utils.data import Dataset
-from torch.utils.data.sampler import Sampler, BatchSampler
+from torch.utils.data.sampler import Sampler
 import random
 import numpy as np
 import time
@@ -25,12 +25,13 @@ class SubGroupsRandomSampler(Sampler):
 
 class UMDDataset(Dataset):
 
-    def __init__(self, path, ypr_quant, deg_dim, h_flip_augment, use_cuda):
+    def __init__(self, path, ypr_quant, ypr_regress, deg_dim, h_flip_augment, use_cuda):
 
         assert not ypr_quant or (180 % deg_dim == 0), \
             "Invalid deg_dim parameter defined for trainer params: %r" % deg_dim
 
         self.ypr_quant = ypr_quant
+        self.ypr_regress = ypr_regress
         self.deg_dim = deg_dim
         self.deg_dim_quant = 180 / deg_dim  # How much quantization should be applied
         self.h_flip_augment = h_flip_augment
@@ -72,8 +73,8 @@ class UMDDataset(Dataset):
         return x.float().div(255).mul_(2).sub_(1)  # To range -1 to 1
 
     @staticmethod
-    def normalize_angles(y):
-        return torch.clamp(y.mul(180).float(), min=0.0, max=179.0)
+    def denormalize_angles(y):
+        return torch.clamp(y.mul(180), min=0.0, max=179.0)  # To range 0 to 179
 
     @staticmethod
     def to_one_hot(y, dof=180, dof_quant=1):
@@ -101,14 +102,15 @@ class UMDDataset(Dataset):
 
         x = self.current_batch[idx - self.current_batch_range[0]]
         x = self.normalize_img(x)
-        y = self.labels[idx]
+        y = self.labels[idx].float()
 
         if self.h_flip_augment and random.random() >= 0.5:
             x, y = self.flip_horizontally(x, y)
 
         if self.ypr_quant:
-            y = self.normalize_angles(y)
-            y = self.to_one_hot(y, self.deg_dim, self.deg_dim_quant)
+            y_onehot = self.denormalize_angles(y)
+            y_onehot = self.to_one_hot(y_onehot, self.deg_dim, self.deg_dim_quant)
+            y = torch.cat((y, y_onehot)) if self.ypr_regress else y_onehot   # Concat with regress or take over
 
         if self.use_cuda:
             x = x.cuda()

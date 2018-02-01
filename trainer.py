@@ -24,12 +24,13 @@ class FaderNetTrainer:
         if self.gpus_count == 0:
             self.use_cuda = False
 
+        attr_dim = 0
         if t_params['ypr_quant']:
-            attr_dim = t_params['deg_dim'] * 3
+            attr_dim += t_params['deg_dim'] * 3
             self.adversarial_loss_func = nn.CrossEntropyLoss()
-        else:
-            attr_dim = 3
-            self.adversarial_loss_func = nn.MSELoss()
+        if t_params['ypr_regress']:
+            attr_dim += 3
+            self.adversarial_loss_func_regress = nn.MSELoss()
             self.max_regress_loss = torch.FloatTensor(3).fill_(180 ** 2)
             if self.use_cuda:
                 self.max_regress_loss = self.max_regress_loss.cuda()
@@ -46,6 +47,7 @@ class FaderNetTrainer:
                                            lr=t_params['learning_rate'], betas=(t_params['beta1'], t_params['beta2']))
 
         self.ypr_quant = t_params['ypr_quant']
+        self.ypr_regress = t_params['ypr_regress']
         self.total_epochs = 0
         self.plotter = Plotter(path=self.t_params['plot_path'])
         self.best_discrm_loss = float("inf")
@@ -65,12 +67,15 @@ class FaderNetTrainer:
         loss = 0
         if self.ypr_quant:
             degs_dim = self.t_params['deg_dim']
-            for angle_idx in range(0, 3*degs_dim, degs_dim):
+            one_hot_start = 3 if self.ypr_regress else 0
+            for angle_idx in range(one_hot_start, 3*degs_dim, degs_dim):
                 y_target = y[:, angle_idx:angle_idx+degs_dim].max(1)[1] # Index of target degree
                 y_predict_target = y_predict[:, angle_idx:angle_idx+degs_dim]
                 loss = loss + self.adversarial_loss_func(y_predict_target, y_target)
-        else:
-            loss = loss + self.adversarial_loss_func(y_predict, y)
+        if self.ypr_regress:
+            for angle_idx in range(3):
+                mse = self.adversarial_loss_func_regress(y_predict[:, angle_idx], y[:, angle_idx])
+                loss = loss - (torch.log(1 - mse) * self.t_params['ypr_regress_weight'])
 
         return loss
 
@@ -79,8 +84,9 @@ class FaderNetTrainer:
         if self.ypr_quant:
             batch_size = y.size()[0]
             degs_dim = self.t_params['deg_dim']
+            one_hot_start = 3 if self.ypr_regress else 0
 
-            for angle_idx in range(0, 3*degs_dim, degs_dim):
+            for angle_idx in range(one_hot_start, 3*degs_dim, degs_dim):
                 y_target = y[:, angle_idx:angle_idx+degs_dim].max(1)[1]  # Index of target degree
                 delta = torch.LongTensor(batch_size).random_(degs_dim - 1) + 1
                 if self.use_cuda:
@@ -89,7 +95,9 @@ class FaderNetTrainer:
                 y_predict_target = y_predict[:, angle_idx:angle_idx+degs_dim]
                 loss = loss + self.adversarial_loss_func(y_predict_target, y_target)
         else:
-            loss = Variable(self.max_regress_loss) - self.adversarial_loss_func(y_predict, y)
+            for angle_idx in range(3):
+                mse = self.adversarial_loss_func_regress(y_predict[:, angle_idx], y[:, angle_idx])
+                loss = loss - (torch.log(mse) * self.t_params['ypr_regress_weight'])
 
         return loss
 
@@ -204,11 +212,12 @@ class FaderNetTrainer:
 
         training_data = UMDDataset(path=training_set_path,
                                    ypr_quant=self.ypr_quant, deg_dim=self.t_params['deg_dim'],
+                                   ypr_regress=self.ypr_regress,
                                    h_flip_augment=self.t_params['h_flip_augment'],
                                    use_cuda=self.use_cuda)
         logging.info(str(len(training_data)) + ' training samples loaded.')
-        validation_data = UMDDataset(path=validation_set_path, ypr_quant=self.ypr_quant,
-                                     deg_dim=self.t_params['deg_dim'], h_flip_augment=self.t_params['h_flip_augment'],
+        validation_data = UMDDataset(path=validation_set_path, ypr_quant=self.ypr_quant, deg_dim=self.t_params['deg_dim'],
+                                     ypr_regress=self.ypr_regress, h_flip_augment=self.t_params['h_flip_augment'],
                                      use_cuda=self.use_cuda)
         logging.info(str(len(validation_data)) + ' validation samples loaded.')
 
