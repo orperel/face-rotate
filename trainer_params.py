@@ -70,6 +70,3 @@ training_params = {
     # Yaw, Roll labels are updated accordingly.
     'h_flip_augment': False
 }
-
-trainer = FaderNetTrainer(training_params)
-trainer.train()
