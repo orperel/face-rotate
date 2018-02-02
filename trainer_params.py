@@ -27,7 +27,7 @@ training_params = {
     'models_path': "models" + os.path.sep,
 
     # SGD parameters
-    'batch_size': 128,
+    'batch_size': 256,
     'epochs': 4000,
 
     # Number of samples per epoch - set 0 for no maximum
