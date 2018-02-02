@@ -29,18 +29,18 @@ class SubGroupsRandomSampler(Sampler):
             for count, idx in enumerate(np.random.permutation(group_size)):
                 yield int(group_file[0]) + idx
 
-                # Approaching end of batch, prefetch next one
-                if count == int(group_size * 0.7):
-                    if file_idx + 1 < len(self.data_source.data_files):  # Only if there is a next one
-                        if self.prefetch_thread is not None:             # First make sure previous prefetch is over
-                            self.prefetch_thread.join()
-
-                        prefetch_idx = int(file_order[file_idx + 1][0]) + 1
-                        self.prefetch_thread = threading.Thread(name='prefetch',
-                                                                target=self.data_source.prefetch,
-                                                                args=(prefetch_idx, True))
-                        self.prefetch_thread.setDaemon(True)
-                        self.prefetch_thread.start()
+                # # Approaching end of batch, prefetch next one
+                # if count == int(group_size * 0.7):
+                #     if file_idx + 1 < len(self.data_source.data_files):  # Only if there is a next one
+                #         if self.prefetch_thread is not None:             # First make sure previous prefetch is over
+                #             self.prefetch_thread.join()
+                #
+                #         prefetch_idx = int(file_order[file_idx + 1][0]) + 1
+                #         self.prefetch_thread = threading.Thread(name='prefetch',
+                #                                                 target=self.data_source.prefetch,
+                #                                                 args=(prefetch_idx, True))
+                #         self.prefetch_thread.setDaemon(True)
+                #         self.prefetch_thread.start()
 
     def __len__(self):
         return len(self.data_source)
