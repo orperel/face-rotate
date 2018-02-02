@@ -96,6 +96,8 @@ class GenderFaderNetTrainer:
 
         loss = self.adversarial_loss(y, y_predict)
 
+        assert not (loss != loss).data.any(), "NaN result in loss function"
+
         if mode == 'Training':
             self.discrm_optimizer.zero_grad()
             loss.backward()  # Backprop
@@ -145,6 +147,9 @@ class GenderFaderNetTrainer:
         ae_mean_loss = 0
 
         for batch in dataloader:
+            if self.use_cuda:
+                batch = {'data': batch['data'].cuda(async=True), 'label': batch['label'].cuda(async=True)}
+
             discriminator_loss = self.discr_iteration(batch, mode)
             auto_encoder_loss = self.autoenc_iteration(batch, mode)
 
@@ -183,6 +188,8 @@ class GenderFaderNetTrainer:
             self.discrm = self.discrm.cpu()
             self.autoenc = self.autoenc.cpu()
 
+        torch.backends.cudnn.benchmark = True
+
         training_set_path = os.path.join(self.t_params['dataset_path'], 'training', self.t_params['data_group'])
         validation_set_path = os.path.join(self.t_params['dataset_path'], 'validation', self.t_params['data_group'])
 
@@ -198,11 +205,11 @@ class GenderFaderNetTrainer:
         logging.info(str(len(validation_data)) + ' validation samples loaded.')
 
         train_dataloader = DataLoader(training_data, batch_size=self.t_params['batch_size'],
-                                      shuffle=False, sampler=SubGroupsRandomSampler(training_data), num_workers=0,
-                                      pin_memory=False)
+                                      shuffle=False, sampler=SubGroupsRandomSampler(training_data), num_workers=1,
+                                      pin_memory=True)
         validation_dataloader = DataLoader(validation_data, batch_size=1,
-                                           shuffle=False, sampler=SubGroupsRandomSampler(validation_data), num_workers=0,
-                                           pin_memory=False)
+                                           shuffle=False, sampler=SubGroupsRandomSampler(validation_data), num_workers=1,
+                                           pin_memory=True)
 
         if not os.path.exists(self.t_params['models_path']):
             os.makedirs(self.t_params['models_path'])

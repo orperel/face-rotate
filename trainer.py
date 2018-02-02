@@ -123,6 +123,8 @@ class FaderNetTrainer:
 
         loss = self.adversarial_loss(y, y_predict)
 
+        assert not (loss != loss).data.any(), "NaN result in loss function"
+
         if mode == 'Training':
             self.discrm_optimizer.zero_grad()
             loss.backward()  # Backprop
@@ -175,8 +177,6 @@ class FaderNetTrainer:
 
             if self.use_cuda:
                 batch = {'data': batch['data'].cuda(async=True), 'label': batch['label'].cuda(async=True)}
-            #     x = x.cuda(async=True)
-            #     y = y.cuda(async=True)
 
             discriminator_loss = self.discr_iteration(batch, mode)
             auto_encoder_loss = self.autoenc_iteration(batch, mode)
