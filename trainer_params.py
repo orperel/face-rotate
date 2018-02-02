@@ -8,7 +8,7 @@ training_params = {
     # Limit how many GPUs are used, even if more are available.
     # If 0 is specified the trainer will use all available GPUs.
     # --NOTE--: Multiple GPUs processing does not improve performance at the moment.
-    'force-gpu-count': 1,
+    'force-gpu-count': 2,
 
     # Choose the group of data used:
     # - 'enlarged' - faces smaller than 256, scaled up
