@@ -172,8 +172,6 @@ class FaderNetTrainer:
         ae_mean_loss = 0
 
         for batch in dataloader:
-            if self.use_cuda:
-                batch = {'data': batch['data'].cuda(async=True), 'label': batch['label'].cuda(async=True)}
 
             discriminator_loss = self.discr_iteration(batch, mode)
             auto_encoder_loss = self.autoenc_iteration(batch, mode)
@@ -231,10 +229,10 @@ class FaderNetTrainer:
 
         train_dataloader = DataLoader(training_data, batch_size=self.t_params['batch_size'],
                                       shuffle=False, sampler=SubGroupsRandomSampler(training_data), num_workers=0,
-                                      pin_memory=True)
+                                      pin_memory=False)
         validation_dataloader = DataLoader(validation_data, batch_size=1,
                                            shuffle=False, sampler=SubGroupsRandomSampler(validation_data), num_workers=0,
-                                           pin_memory=True)
+                                           pin_memory=False)
 
         if not os.path.exists(self.t_params['models_path']):
             os.makedirs(self.t_params['models_path'])
