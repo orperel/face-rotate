@@ -234,10 +234,10 @@ class FaderNetTrainer:
 
         train_dataloader = DataLoader(training_data, batch_size=self.t_params['batch_size'],
                                       shuffle=False, sampler=SubGroupsRandomSampler(training_data), num_workers=1,
-                                      pin_memory=False)
+                                      pin_memory=True)
         validation_dataloader = DataLoader(validation_data, batch_size=1,
                                            shuffle=False, sampler=SubGroupsRandomSampler(validation_data), num_workers=1,
-                                           pin_memory=False)
+                                           pin_memory=True)
 
         if not os.path.exists(self.t_params['models_path']):
             os.makedirs(self.t_params['models_path'])
