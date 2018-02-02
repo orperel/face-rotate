@@ -116,10 +116,6 @@ class FaderNetTrainer:
         x = Variable(batch['data'], requires_grad=False)
         y = Variable(batch['label'], requires_grad=False)
 
-        if self.use_cuda:
-            x = x.cuda(async=True)
-            y = y.cuda(async=True)
-
         with torch.no_grad():
             z = self.autoenc.encode(x)
 
@@ -147,10 +143,6 @@ class FaderNetTrainer:
 
         x = Variable(batch['data'], requires_grad=False)
         y = Variable(batch['label'], requires_grad=False)
-
-        if self.use_cuda:
-            x = x.cuda(async=True)
-            y = y.cuda(async=True)
 
         z, x_reconstruct = self.autoenc(x, y)
 
@@ -180,6 +172,9 @@ class FaderNetTrainer:
         ae_mean_loss = 0
 
         for batch in dataloader:
+            if self.use_cuda:
+                batch = {'data': batch['data'].cuda(async=True), 'label': batch['label'].cuda(async=True)}
+
             discriminator_loss = self.discr_iteration(batch, mode)
             auto_encoder_loss = self.autoenc_iteration(batch, mode)
 
