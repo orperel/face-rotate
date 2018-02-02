@@ -8,7 +8,7 @@ training_params = {
     # Limit how many GPUs are used, even if more are available.
     # If 0 is specified the trainer will use all available GPUs.
     # --NOTE--: Multiple GPUs processing does not improve performance at the moment.
-    'force-gpu-count': 2,
+    'force-gpu-count': 4,
 
     # Choose the group of data used:
     # - 'enlarged' - faces smaller than 256, scaled up
@@ -27,7 +27,7 @@ training_params = {
     'models_path': "models" + os.path.sep,
 
     # SGD parameters
-    'batch_size': 64,
+    'batch_size': 128,
     'epochs': 4000,
 
     # Number of samples per epoch - set 0 for no maximum
