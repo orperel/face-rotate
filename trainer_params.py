@@ -27,7 +27,7 @@ training_params = {
     'models_path': "models" + os.path.sep,
 
     # SGD parameters
-    'batch_size': 32,
+    'batch_size': 64,
     'epochs': 4000,
 
     # Number of samples per epoch - set 0 for no maximum
@@ -57,7 +57,7 @@ training_params = {
 
     # If true, the cross-entropy component is added to the AutoEndoer & Discriminator losses.
     # Rotation degrees are treated as discreet one hot vectors with log loss.
-    'ypr_quant': True,
+    'ypr_quant': False,
 
     # Determines how many dimensions the one-hot-vector representation of yaw-pitch-roll should contain.
     # The value should divide 180 without residuals.
@@ -69,7 +69,7 @@ training_params = {
     # For the discriminator: loss = loss - log(1 - || deg - deg_predict || **2)
     # For the auto-encoder: loss = loss - log(|| deg - deg_predict || **2)
     # Where deg, deg_predict are one dimensional vectors with [batch_size] dimensions
-    'ypr_regress': False,
+    'ypr_regress': True,
 
     # A multiplier for the ypr_regress loss component, to make sure it has the same order of magnitude as
     # the cross entropy component
