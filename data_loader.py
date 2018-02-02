@@ -6,18 +6,41 @@ import random
 import numpy as np
 import time
 import logging
+import threading
 
 
 class SubGroupsRandomSampler(Sampler):
 
     def __init__(self, data_source):
         self.data_source = data_source
+        self.prefetch_thread = None
+        self.last_file_visited = None
 
     def __iter__(self):
-        for group_file in np.random.permutation(self.data_source.data_files):
+        file_order = np.random.permutation(self.data_source.data_files)
+
+        if len(file_order) > 1 and self.last_file_visited is not None:  # Start from currently cached batch
+            last_visited_idx = np.where(file_order==self.last_file_visited)
+            file_order[0], file_order[last_visited_idx] = file_order[last_visited_idx], file_order[0]
+
+        for file_idx, group_file in enumerate(file_order):
             group_size = int(group_file[1]) - int(group_file[0])
-            for idx in np.random.permutation(group_size):
+            self.last_file_visited = group_file
+            for count, idx in enumerate(np.random.permutation(group_size)):
                 yield int(group_file[0]) + idx
+
+                # Approaching end of batch, prefetch next one
+                if count == int(group_size * 0.9):
+                    if file_idx + 1 < len(self.data_source.data_files):  # Only if there is a next one
+                        if self.prefetch_thread is not None:             # First make sure previous prefetch is over
+                            self.prefetch_thread.join()
+
+                        prefetch_idx = int(file_order[file_idx + 1][0]) + 1
+                        self.prefetch_thread = threading.Thread(name='prefetch',
+                                                                target=self.data_source.prefetch,
+                                                                args=(prefetch_idx, True))
+                        self.prefetch_thread.setDaemon(True)
+                        self.prefetch_thread.start()
 
     def __len__(self):
         return len(self.data_source)
@@ -38,6 +61,7 @@ class UMDDataset(Dataset):
         self.use_cuda = use_cuda
         self.data_files = []
         self.labels = None
+        self.dataset_lock = threading.Lock()
         batches = []
 
         for filename in os.listdir(path):
@@ -67,6 +91,8 @@ class UMDDataset(Dataset):
 
         self.current_batch_range = (-1, -1)
         self.current_batch = None
+        self.prev_batch_range = (-1, -1)
+        self.prev_batch = None
 
     @staticmethod
     def normalize_img(x):
@@ -88,19 +114,29 @@ class UMDDataset(Dataset):
         y = torch.FloatTensor(np.array([1.0 - y[0], y[1], 1.0-y[2]]))
         return x,y
 
-    def __getitem__(self, idx):
-        # Load next batch if needed
-        if not self.current_batch_range[0] <= idx < self.current_batch_range[1]:
-            next_data_entry = next(entry for entry in self.data_files if entry[0] <= idx < entry[1])
-            self.current_batch_range = (next_data_entry[0], next_data_entry[1])
+    def prefetch(self, idx, true_prefetch):
+        with self.dataset_lock:
+            if not self.current_batch_range[0] <= idx < self.current_batch_range[1]:
+                if self.prev_batch_range[0] <= idx < self.prev_batch_range[1]:
+                    return self.fetch_from_batch(self.prev_batch, self.prev_batch_range, idx)
+                next_data_entry = next(entry for entry in self.data_files if entry[0] <= idx < entry[1])
+                self.current_batch_range = (next_data_entry[0], next_data_entry[1])
 
-            logging.info('Swapping data-batch file to: ' + next_data_entry[2])
-            start = time.time()
-            self.current_batch = torch.load(next_data_entry[2])
-            end = time.time()
-            logging.info('Loading completed after ' + '{0:.2f}'.format(end - start) + ' seconds')
+                if true_prefetch:
+                    logging.info('Prefetch optimization executed..')
+                else:
+                    logging.info('Hot cache miss for data-batch file..')
+                logging.info('Swapping data-batch file to: ' + next_data_entry[2])
+                start = time.time()
+                self.prev_batch = self.current_batch
+                self.prev_batch_range = self.current_batch_range
+                self.current_batch = torch.load(next_data_entry[2])
+                end = time.time()
+                logging.info('Loading completed after ' + '{0:.2f}'.format(end - start) + ' seconds')
 
-        x = self.current_batch[idx - self.current_batch_range[0]]
+
+    def fetch_from_batch(self, batch_file, batch_range, idx):
+        x = batch_file[idx - batch_range[0]]
         x = self.normalize_img(x)
         y = self.labels[idx].float()
 
@@ -110,13 +146,20 @@ class UMDDataset(Dataset):
         if self.ypr_quant:
             y_onehot = self.denormalize_angles(y)
             y_onehot = self.to_one_hot(y_onehot, self.deg_dim, self.deg_dim_quant)
-            y = torch.cat((y, y_onehot)) if self.ypr_regress else y_onehot   # Concat with regress or take over
-
-        if self.use_cuda:
-            x = x.cuda(async=True)
-            y = y.cuda(async=True)
+            y = torch.cat((y, y_onehot)) if self.ypr_regress else y_onehot  # Concat with regress or take over
 
         return {'data': x, 'label': y}
+
+    def __getitem__(self, idx):
+        # Load next batch if needed,
+        # Maintain a LRU history of size 1
+        if not self.current_batch_range[0] <= idx < self.current_batch_range[1]:
+            if self.prev_batch_range[0] <= idx < self.prev_batch_range[1]:
+                return self.fetch_from_batch(self.prev_batch, self.prev_batch_range, idx)
+            else:
+                self.prefetch(idx, False)
+
+        return self.fetch_from_batch(self.current_batch, self.current_batch_range, idx)
 
     def __len__(self):
         return self.data_files[-1][1]
