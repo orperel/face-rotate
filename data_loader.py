@@ -30,7 +30,7 @@ class SubGroupsRandomSampler(Sampler):
                 yield int(group_file[0]) + idx
 
                 # Approaching end of batch, prefetch next one
-                if count == int(group_size * 0.9):
+                if count == int(group_size * 0.7):
                     if file_idx + 1 < len(self.data_source.data_files):  # Only if there is a next one
                         if self.prefetch_thread is not None:             # First make sure previous prefetch is over
                             self.prefetch_thread.join()
