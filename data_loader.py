@@ -120,6 +120,9 @@ class UMDDataset(Dataset):
                 if self.prev_batch_range[0] <= idx < self.prev_batch_range[1]:
                     return self.fetch_from_batch(self.prev_batch, self.prev_batch_range, idx)
                 next_data_entry = next(entry for entry in self.data_files if entry[0] <= idx < entry[1])
+
+                self.prev_batch = self.current_batch
+                self.prev_batch_range = self.current_batch_range
                 self.current_batch_range = (next_data_entry[0], next_data_entry[1])
 
                 if true_prefetch:
@@ -128,8 +131,7 @@ class UMDDataset(Dataset):
                     logging.info('Hot cache miss for data-batch file..')
                 logging.info('Swapping data-batch file to: ' + next_data_entry[2])
                 start = time.time()
-                self.prev_batch = self.current_batch
-                self.prev_batch_range = self.current_batch_range
+
                 self.current_batch = torch.load(next_data_entry[2])
                 end = time.time()
                 logging.info('Loading completed after ' + '{0:.2f}'.format(end - start) + ' seconds')
