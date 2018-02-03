@@ -35,8 +35,8 @@ training_params = {
     'validation_samples_per_epoch': 50000,
 
     # Adam optimizer params
-    'learning_rate': 0.0001,  # Originally: 0.002,
-    'beta1': 0.9,   # Originally: 0.5
+    'learning_rate': 0.002,  # Originally: 0.002,
+    'beta1': 0.5,   # Originally: 0.5
     'beta2': 0.999,
 
     # Maximum gradient norm, clipping occurs for norms larger than this value. 0 performs no gradient clipping.

@@ -146,22 +146,29 @@ class GenderFaderNetTrainer:
         d_mean_loss = 0
         ae_mean_loss = 0
 
+        turns_pattern = ['D', 'AE']
+        pattern_idx = 0
+
         for batch in dataloader:
+
             if self.use_cuda:
                 batch = {'data': batch['data'].cuda(async=True), 'label': batch['label'].cuda(async=True)}
 
-            discriminator_loss = self.discr_iteration(batch, mode)
-            auto_encoder_loss = self.autoenc_iteration(batch, mode)
+            if turns_pattern[pattern_idx] == 'D':
+                discriminator_loss = self.discr_iteration(batch, mode)
+                d_mean_loss += discriminator_loss.data[0]  # Already averaged by #nn_outputs * #batch_size
+            elif turns_pattern[pattern_idx] == 'AE':
+                auto_encoder_loss = self.autoenc_iteration(batch, mode)
+                self.lambda_e = min(self.lambda_e + self.lambda_e_step_size, self.lambda_e_max)
+                ae_mean_loss += auto_encoder_loss.data[0]
 
-            self.lambda_e = min(self.lambda_e + self.lambda_e_step_size, self.lambda_e_max)
-            d_mean_loss += discriminator_loss.data[0]  # Already averaged by #nn_outputs * #batch_size
-            ae_mean_loss += auto_encoder_loss.data[0]
-
-            total_iterations += 1
-            if total_iterations % 100 == 0:
-                logging.info('Processed %i iterations', (total_iterations))
-            if total_iterations*self.t_params['batch_size'] >= max_samples:
-                break
+            pattern_idx = (pattern_idx + 1) % len(turns_pattern)
+            if pattern_idx == 0:
+                total_iterations += 1
+                if total_iterations % 100 == 0:
+                    logging.info('Processed %i iterations', total_iterations)
+                if total_iterations * self.t_params['batch_size'] >= max_samples:
+                    break
 
         processed_samples_count = total_iterations*self.t_params['batch_size']
         d_mean_loss /= processed_samples_count  # Divide by number of samples
