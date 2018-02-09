@@ -206,9 +206,6 @@ def extract_data(root_path, data_purpose):
                 imgs = []
                 total_imgs += len(batch)
 
-            if row_idx == 300:
-                break
-
         if imgs:
             batch = np.concatenate([img_data.transpose((2, 0, 1))[None] for img_data in imgs])
             save_dataset(data_array=batch, start_entry=total_imgs, target_dir=target_path)
