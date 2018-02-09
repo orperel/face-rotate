@@ -1,10 +1,12 @@
 import argparse
 import logging
-from trainer import FaderNetTrainer
-from gender_trainer import GenderFaderNetTrainer
-from trainer_params import training_params
+
+from sanity.gender_trainer import GenderFaderNetTrainer
+
 from evaluator import report_status_to_visdom, show_random_samples
-from gender_evaluator import report_gender_status_to_visdom, show_gender_random_samples
+from sanity.gender_evaluator import report_gender_status_to_visdom, show_gender_random_samples
+from trainer import FaderNetTrainer
+from trainer_params import training_params
 
 
 def begin_training():

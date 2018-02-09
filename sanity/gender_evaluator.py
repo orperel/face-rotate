@@ -1,11 +1,15 @@
-import torch
-from gender_data_loader import UMDDataset
-from torch.utils.data import DataLoader
-from evaluator_params import evaluating_params
 import os
+from random import randint
+
 import matplotlib.pyplot as plt
-from torch.autograd import Variable
 import numpy as np
+import torch
+from torch.autograd import Variable
+from torch.utils.data import DataLoader
+
+from evaluator_params import evaluating_params
+from sanity.gender_data_loader import UMDDataset
+
 
 def denormalize_img(x):
     return x.add(1).div_(2)
@@ -46,7 +50,7 @@ def show_gender_random_samples():
     data = UMDDataset(path=os.path.join('dataset', data_type, data_group),
                       ypr_quant=ypr_quant, deg_dim=dof, ypr_regress=ypr_regress,
                       h_flip_augment=h_flip_aug, use_cuda=use_cuda)
-    dataloader = DataLoader(data, batch_size=1, shuffle=True, num_workers=0)
+    dataloader = DataLoader(data, batch_size=1, shuffle=False, num_workers=0)
 
     with torch.no_grad():
         autoenc = torch.load(autoenc_model_path)
@@ -57,7 +61,12 @@ def show_gender_random_samples():
         else:
             autoenc.cuda()
 
-        for batch in dataloader:
+        random = randint(0, 15)
+
+        for idx, batch in enumerate(dataloader):
+
+            if idx % 20 != random:
+                continue
 
             x = Variable(batch['data'])
             y = Variable(batch['label'])

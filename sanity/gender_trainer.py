@@ -1,15 +1,17 @@
+import logging
+import os
+import time
+
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from torch.utils.data import DataLoader
 from torch.autograd import Variable
-from gender_data_loader import UMDDataset, SubGroupsRandomSampler
-from plotter import Plotter
+from torch.utils.data import DataLoader
+
 from model import FaderNetAutoencoder, FaderNetDiscriminator
+from plotter import Plotter
+from sanity.gender_data_loader import UMDDataset, SubGroupsRandomSampler
 from utils import query_available_gpus
-import os
-import time
-import logging
 
 
 class GenderFaderNetTrainer:
