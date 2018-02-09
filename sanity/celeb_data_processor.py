@@ -14,7 +14,7 @@ NN_INPUT_SIZE = 256              # Input size to the Fader NN
 ENTRIES_PER_OUTPUT = 50000       # Amount of entries iterated for each batch
 ANNOTATIONS_FILE = 'list_attr_celeba.txt'
 IMAGES_FILE = 'img_align_celeba.zip'
-data_root = '.'  # Where should the dataset be downloaded / extracted to
+data_root = '/mnt/data/orperel'  # Where should the dataset be downloaded / extracted to
 
 
 class DataPurpose(Enum):
@@ -205,6 +205,7 @@ def extract_data(root_path, data_purpose):
                 save_dataset(data_array=batch, start_entry=total_imgs, target_dir=target_path)
                 imgs = []
                 total_imgs += len(batch)
+                break
 
         if imgs:
             batch = np.concatenate([img_data.transpose((2, 0, 1))[None] for img_data in imgs])
