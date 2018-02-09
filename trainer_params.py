@@ -15,10 +15,11 @@ training_params = {
     # - 'decimated - faces bigger than 256, scaled down
     # - 'all' - use entire dataset regardless of size
     # - 'debug' - small set for debug purposes
-    'data_group': 'all',
+    'data_group': 'celebA',
 
     # Location of saved dataset
-    'dataset_path': "dataset" + os.path.sep,
+    #
+    'dataset_path': "/mnt/data/orperel/dataset" + os.path.sep,
 
     # Location of saved plots
     'plot_path': "plots" + os.path.sep,
@@ -28,7 +29,7 @@ training_params = {
 
     # SGD parameters
     'batch_size': 32,
-    'epochs': 4000,
+    'epochs': 1000,
 
     # Number of samples per epoch - set 0 for no maximum
     'training_samples_per_epoch': 50000,

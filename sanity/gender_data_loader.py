@@ -51,15 +51,13 @@ class UMDDataset(Dataset):
         batches = []
 
         for filename in os.listdir(path):
-            assert filename.startswith('umd_') and filename.endswith('.pth'), \
+            assert (filename.startswith('umd_') or filename.startswith('celebA_')) and filename.endswith('.pth'), \
                    "Invalid file %r, does not belong to UMDFaces dataset" % filename
 
             filepath = os.path.join(path, filename)
 
-            if 'gender_labels' in filename:
+            if '_labels' in filename:
                 self.labels = torch.load(filepath)
-            elif '_labels' in filename:
-                pass    # Ignore
             else:
                 last_underscore_idx = filename.rfind('_')
                 batch_end = int(filename[last_underscore_idx+1:-len('.pth')])
