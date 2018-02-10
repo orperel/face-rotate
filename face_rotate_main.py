@@ -24,6 +24,11 @@ def continue_training(flush_params):
     FaderNetTrainer.continue_training(training_params['models_path'], with_params)
 
 
+def continue_gender(flush_params):
+    with_params = training_params if flush_params else None
+    GenderFaderNetTrainer.continue_training(training_params['models_path'], with_params)
+
+
 def evaluate():
     report_status_to_visdom(training_params['plot_path'] + 'last_plot.pth')
     show_random_samples()
