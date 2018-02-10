@@ -55,6 +55,10 @@ elif args.run == 'eval':
     evaluate()
 elif args.run == 'gender':
     begin_training_gender()
+elif args.run == 'continue_gender':
+    flush_params = args.flush_params == 'Yes' or args.flush_params == 'True' or \
+                   args.flush_params == 'true' or args.flush_params == '1'
+    continue_gender(flush_params)
 elif args.run == 'eval_gender':
     evaluate_gender()
 else:
