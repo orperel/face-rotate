@@ -237,10 +237,15 @@ class GenderFaderNetTrainer:
             # Always save best model found in term of minimal loss
             if self.best_discrm_loss > d_mean_loss:
                 self.best_discrm_loss = d_mean_loss
-                torch.save(self.discrm, self.t_params['models_path'] + 'discriminator' + str(t+1) + '.pth')
+                torch.save(self.discrm, self.t_params['models_path'] + 'best_discriminator' + str(t+1) + '.pth')
             elif self.best_autoenc_loss > ae_mean_loss:
                 self.best_autoenc_loss = ae_mean_loss
-                torch.save(self.autoenc, self.t_params['models_path'] + 'autoencoder' + str(t+1) + '.pth')
+                torch.save(self.autoenc, self.t_params['models_path'] + 'best_autoencoder' + str(t+1) + '.pth')
+
+            # Save periodically
+            if t % 50 == 0:
+                torch.save(self.discrm, self.t_params['models_path'] + 'discriminator' + str(t + 1) + '.pth')
+                torch.save(self.autoenc, self.t_params['models_path'] + 'autoencoder' + str(t + 1) + '.pth')
 
             self.plotter.plot_losses(window='Losses')
             torch.save(self.discrm, self.t_params['models_path'] + 'last_discriminator.pth')
