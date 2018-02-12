@@ -1,0 +1,39 @@
+INFO - 02/12/18 01:51:39 - 0:00:00 - ============ Initialized logger ============
+INFO - 02/12/18 01:51:39 - 0:00:00 - ae_optimizer: adam,lr=0.0002
+                                     ae_reload: 
+                                     attr: [('Male', 2), ('Smiling', 2)]
+                                     batch_size: 32
+                                     clf_dis_reload: 
+                                     clip_grad_norm: 5
+                                     debug: False
+                                     dec_dropout: 0.0
+                                     deconv_method: convtranspose
+                                     dis_optimizer: adam,lr=0.0002
+                                     dump_path: /home/orperel/FaderNetworks/models/default/yljijvs4i5
+                                     epoch_size: 50000
+                                     eval_clf: models/classifier256.pth
+                                     h_flip: True
+                                     hid_dim: 512
+                                     img_fm: 3
+                                     img_sz: 256
+                                     init_fm: 32
+                                     instance_norm: False
+                                     lambda_ae: 1
+                                     lambda_clf_dis: 0
+                                     lambda_lat_dis: 0.0001
+                                     lambda_ptc_dis: 0
+                                     lambda_schedule: 500000
+                                     lat_dis_dropout: 0.3
+                                     lat_dis_reload: 
+                                     max_fm: 512
+                                     n_attr: 4
+                                     n_clf_dis: 0
+                                     n_epochs: 1000
+                                     n_lat_dis: 1
+                                     n_layers: 6
+                                     n_ptc_dis: 0
+                                     n_skip: 0
+                                     name: default
+                                     ptc_dis_reload: 
+                                     smooth_label: 0.2
+                                     v_flip: False
