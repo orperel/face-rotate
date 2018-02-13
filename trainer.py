@@ -23,6 +23,8 @@ class FaderNetTrainer:
             self.gpus_count = t_params['force-gpu-count']
         if self.gpus_count == 0:
             self.use_cuda = False
+        elif self.gpus_count > 1 and self.gpus_count > t_params['default-gpu']:
+            torch.cuda.set_device(t_params['default-gpu'])
 
         attr_dim = 0
         if t_params['ypr_quant']:
@@ -38,9 +40,12 @@ class FaderNetTrainer:
         self.reconstruction_loss_func = nn.MSELoss()
 
         self.autoenc = FaderNetAutoencoder(num_of_layers=t_params['autoenc_layer_count'], attr_dim=attr_dim,
+                                           stn_transform=t_params['stn'],
                                            gpus_count=self.gpus_count)
         self.discrm = FaderNetDiscriminator(num_of_layers=t_params['autoenc_layer_count'], attr_dim=attr_dim,
                                             gpus_count=self.gpus_count)
+        logging.debug(self.autoenc)
+        logging.debug(self.discrm)
         self.autoenc_optimizer = optim.Adam(self.autoenc.parameters(),
                                             lr=t_params['learning_rate'], betas=(t_params['beta1'], t_params['beta2']))
         self.discrm_optimizer = optim.Adam(self.discrm.parameters(),
@@ -172,6 +177,7 @@ class FaderNetTrainer:
         total_iterations = 0
         d_mean_loss = 0
         ae_mean_loss = 0
+        batch_size = self.t_params['batch_size']
 
         turns_pattern = ['D', 'AE']
         pattern_idx = 0
@@ -190,14 +196,14 @@ class FaderNetTrainer:
                 ae_mean_loss += auto_encoder_loss.data[0]
 
             pattern_idx = (pattern_idx + 1) % len(turns_pattern)
-            if pattern_idx == 0:
-                total_iterations += 1
-                if total_iterations % 100 == 0:
+            if pattern_idx == 0 and mode == 'Training':
+                total_iterations += batch_size
+                if total_iterations % batch_size*5 == 0:
                     logging.info('Processed %i iterations', total_iterations)
-                if total_iterations*self.t_params['batch_size'] >= max_samples:
+                if total_iterations >= max_samples:
                     break
 
-        processed_samples_count = total_iterations*self.t_params['batch_size']
+        processed_samples_count = total_iterations
         d_mean_loss /= processed_samples_count  # Divide by number of samples
         ae_mean_loss /= processed_samples_count  # Divide by number of samples
         self.plotter.update_loss_plot_data(network='Discriminator', mode=mode, new_epoch=(t + 1), new_loss=d_mean_loss)
@@ -262,10 +268,15 @@ class FaderNetTrainer:
             # Always save best model found in term of minimal loss
             if self.best_discrm_loss > d_mean_loss:
                 self.best_discrm_loss = d_mean_loss
-                torch.save(self.discrm, self.t_params['models_path'] + 'discriminator' + str(t+1) + '.pth')
+                torch.save(self.discrm, self.t_params['models_path'] + 'best_discriminator' + str(t+1) + '.pth')
             elif self.best_autoenc_loss > ae_mean_loss:
                 self.best_autoenc_loss = ae_mean_loss
-                torch.save(self.autoenc, self.t_params['models_path'] + 'autoencoder' + str(t+1) + '.pth')
+                torch.save(self.autoenc, self.t_params['models_path'] + 'best_autoencoder' + str(t+1) + '.pth')
+
+            # Save periodically
+            if t % 5 == 0:
+                torch.save(self.discrm, self.t_params['models_path'] + 'discriminator' + str(t + 1) + '.pth')
+                torch.save(self.autoenc, self.t_params['models_path'] + 'autoencoder' + str(t + 1) + '.pth')
 
             self.plotter.plot_losses(window='Losses')
             torch.save(self.discrm, self.t_params['models_path'] + 'last_discriminator.pth')

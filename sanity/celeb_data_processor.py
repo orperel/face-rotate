@@ -189,7 +189,7 @@ def extract_data(root_path, data_purpose):
                 print("Bad image file in dataset: %r" % filename)
                 continue
             img = cv2.imread(filename)
-            cropped = img[40:218, 0:178]
+            cropped = img[20:-20, 0:178]
             scaled = cv2.resize(src=cropped, dsize=(NN_INPUT_SIZE, NN_INPUT_SIZE), interpolation=cv2.INTER_LANCZOS4)
             imgs.append(scaled)
 
@@ -201,7 +201,6 @@ def extract_data(root_path, data_purpose):
                 print('Iterated %i samples' % row_idx)
             if row_idx > 0 and row_idx % ENTRIES_PER_OUTPUT == 0:
                 batch = np.concatenate([img_data.transpose((2, 0, 1))[None] for img_data in imgs])
-
                 save_dataset(data_array=batch, start_entry=total_imgs, target_dir=target_path)
                 imgs = []
                 total_imgs += len(batch)
