@@ -165,10 +165,12 @@ class GenderFaderNetTrainer:
             if turns_pattern[pattern_idx] == 'D':
                 discriminator_loss = self.discr_iteration(batch, mode)
                 d_mean_loss += discriminator_loss.data[0]  # Already averaged by #nn_outputs * #batch_size
+                logging.info('Discriminator loss: ' + "{0:.2f}".format(discriminator_loss.data[0]))
             elif turns_pattern[pattern_idx] == 'AE':
                 auto_encoder_loss = self.autoenc_iteration(batch, mode)
                 self.lambda_e = min(self.lambda_e + self.lambda_e_step_size, self.lambda_e_max)
                 ae_mean_loss += auto_encoder_loss.data[0]
+                logging.info('AutoEncoder loss: ' + "{0:.2f}".format(auto_encoder_loss.data[0]))
 
             pattern_idx = (pattern_idx + 1) % len(turns_pattern)
             if pattern_idx == 0 and mode == 'Training':
@@ -181,6 +183,8 @@ class GenderFaderNetTrainer:
         processed_samples_count = total_iterations
         d_mean_loss /= processed_samples_count  # Divide by number of samples
         ae_mean_loss /= processed_samples_count  # Divide by number of samples
+        logging.info('Epoch mean loss: [AutoEnc: ' + "{0:.2f}".format(ae_mean_loss) +
+                     ' Discriminator: ' + "{0:.2f}".format(d_mean_loss) + ']')
         self.plotter.update_loss_plot_data(network='Discriminator', mode=mode, new_epoch=(t + 1), new_loss=d_mean_loss)
         self.plotter.update_loss_plot_data(network='AutoEncoder', mode=mode, new_epoch=(t + 1), new_loss=ae_mean_loss)
 
@@ -243,10 +247,16 @@ class GenderFaderNetTrainer:
             # Always save best model found in term of minimal loss
             if self.best_discrm_loss > d_mean_loss:
                 self.best_discrm_loss = d_mean_loss
-                torch.save(self.discrm, self.t_params['models_path'] + 'best_discriminator' + str(t+1) + '.pth')
+                torch.save(self.discrm,
+                           self.t_params['models_path'] + 'best_d_loss_discriminator' + str(t + 1) + '.pth')
+                torch.save(self.autoenc,
+                           self.t_params['models_path'] + 'best_d_loss_autoencoder' + str(t + 1) + '.pth')
             elif self.best_autoenc_loss > ae_mean_loss:
                 self.best_autoenc_loss = ae_mean_loss
-                torch.save(self.autoenc, self.t_params['models_path'] + 'best_autoencoder' + str(t+1) + '.pth')
+                torch.save(self.discrm,
+                           self.t_params['models_path'] + 'best_ae_loss_discriminator' + str(t + 1) + '.pth')
+                torch.save(self.autoenc,
+                           self.t_params['models_path'] + 'best_ae_loss_autoencoder' + str(t + 1) + '.pth')
 
             # Save periodically
             if t % 5 == 0:

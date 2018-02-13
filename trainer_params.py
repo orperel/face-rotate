@@ -10,6 +10,9 @@ training_params = {
     # --NOTE--: Multiple GPUs processing does not improve performance at the moment.
     'force-gpu-count': 1,
 
+    # When only a single gpu is specified, this will be the default gpu index used.
+    'default-gpu': 0,
+
     # Choose the group of data used:
     # - 'enlarged' - faces smaller than 256, scaled up
     # - 'decimated - faces bigger than 256, scaled down
@@ -18,14 +21,20 @@ training_params = {
     'data_group': 'celebA',
 
     # Location of saved dataset
-    #
     'dataset_path': "/mnt/data/orperel/dataset" + os.path.sep,
+    # 'dataset_path': "sanity/dataset" + os.path.sep,
 
     # Location of saved plots
     'plot_path': "plots" + os.path.sep,
 
     # Location of output saved models
-    'models_path': "models" + os.path.sep,
+    'models_path': "/mnt/data/orperel/models" + os.path.sep,
+
+    # Use Spatial Transformer Networks, choose from:
+    # 'attention' - For scale, crop, translate
+    # 'affine' - For affine transformations
+    # None - If no STN should be employed
+    'stn': None,
 
     # SGD parameters
     'batch_size': 32,
@@ -36,7 +45,7 @@ training_params = {
     'validation_samples_per_epoch': 50000,
 
     # Adam optimizer params
-    'learning_rate': 0.002,  # Originally: 0.002,
+    'learning_rate': 0.0002,  # Paper: 0.002,
     'beta1': 0.5,   # Originally: 0.5
     'beta2': 0.999,
 
@@ -54,7 +63,7 @@ training_params = {
     'autoenc_loss_reg_adaption_steps': 500000,  # Originally: 500000,
 
     # Number of convolution layers in encoder / decoder
-    'autoenc_layer_count': 7,
+    'autoenc_layer_count': 6,
 
     # If true, the cross-entropy component is added to the AutoEndoer & Discriminator losses.
     # Rotation degrees are treated as discreet one hot vectors with log loss.
