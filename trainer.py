@@ -193,14 +193,15 @@ class FaderNetTrainer:
                 logging.info('Discriminator loss: ' + "{0:.2f}".format(discriminator_loss.data[0]))
             elif turns_pattern[pattern_idx] == 'AE':
                 auto_encoder_loss = self.autoenc_iteration(batch, mode)
-                self.lambda_e = min(self.lambda_e + self.lambda_e_step_size, self.lambda_e_max)
+                if mode == 'Training':
+                    self.lambda_e = min(self.lambda_e + self.lambda_e_step_size, self.lambda_e_max)
                 ae_mean_loss += auto_encoder_loss.data[0]
                 logging.info('AutoEncoder loss: ' + "{0:.2f}".format(auto_encoder_loss.data[0]))
 
             pattern_idx = (pattern_idx + 1) % len(turns_pattern)
-            if pattern_idx == 0 and mode == 'Training':
+            if pattern_idx == 0:
                 total_iterations += batch_size
-                if total_iterations % batch_size*5 == 0:
+                if total_iterations % batch_size * 5 == 0:
                     logging.info('Processed %i iterations', total_iterations)
                 if total_iterations >= max_samples:
                     break
