@@ -72,8 +72,8 @@ class FaderNetAutoencoder(nn.Module):
         self.gpus_count = gpus_count
         self.encoder_layers = self.create_encoder_blocks(num_of_layers)
         self.decoder_layers = self.create_decoder_blocks(num_of_layers, attr_dim)
-        xavier_initialization(self.encoder_layers)
-        xavier_initialization(self.decoder_layers)
+        # xavier_initialization(self.encoder_layers)
+        # xavier_initialization(self.decoder_layers)
 
         self.stn = None
         if stn_transform is not None:
@@ -132,7 +132,7 @@ class FaderNetDiscriminator(nn.Module):
             nn.Linear(in_features=512, out_features=attr_dim, bias=True),
         )
 
-        xavier_initialization(self.modules())
+        # xavier_initialization(self.modules())
 
     def forward(self, z):
 
