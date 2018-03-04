@@ -119,6 +119,8 @@ class UMDDataset(Dataset):
         if self.h_flip_augment and random.random() >= 0.5:
             x, y = self.flip_horizontally(x, y)
 
+        x = x.index_select(0, torch.arange(x.size(0) - 1, -1, -1).long())
+
         return {'data': x, 'label': y}
 
     def __getitem__(self, idx):

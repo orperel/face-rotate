@@ -7,6 +7,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.autograd import Variable
 from torch.utils.data import DataLoader
+from torch.nn import functional as F
 
 from model import FaderNetAutoencoder, FaderNetDiscriminator
 from plotter import Plotter
@@ -37,6 +38,25 @@ class GenderFaderNetTrainer:
                                            gpus_count=self.gpus_count)
         self.discrm = FaderNetDiscriminator(num_of_layers=t_params['autoenc_layer_count'], attr_dim=attr_dim,
                                             gpus_count=self.gpus_count)
+        fader_ae = torch.load('fader_init_ae.pth')
+        fader_dis = torch.load('fader_init_dis.pth')
+
+        new = list(fader_ae.state_dict().items())
+        my_model_kvpair = self.autoenc.state_dict()
+        count = 0
+        for key, value in my_model_kvpair.items():
+            layer_name, weights = new[count]
+            my_model_kvpair[key] = weights
+            count += 1
+
+        new = list(fader_dis.state_dict().items())
+        my_model_kvpair = self.discrm.state_dict()
+        count = 0
+        for key, value in my_model_kvpair.items():
+            layer_name, weights = new[count]
+            my_model_kvpair[key] = weights
+            count += 1
+
         logging.debug(self.autoenc)
         logging.debug(self.discrm)
         self.autoenc_optimizer = optim.Adam(self.autoenc.parameters(),
@@ -67,7 +87,25 @@ class GenderFaderNetTrainer:
         loss = self.adversarial_loss_func(y_predict_target, y_target)
         return loss
 
-    def complementary_adversarial_loss(self, y, y_predict):
+    def get_attr_loss(self, preds, orig, flip):
+        """
+        Compute attributes loss.
+        """
+        assert type(flip) is bool
+        k = 0
+        loss = 0
+        # categorical
+        x = preds[:,:].contiguous()
+        y = orig[:, :].max(1)[1].view(-1)
+        if flip:
+            # generate different categories
+            shift = torch.LongTensor(y.size()).random_(2 - 1) + 1
+            y = (y + Variable(shift.cuda())) % 2
+        loss += F.cross_entropy(x, y)
+        k += 2
+        return loss
+
+    def my_complementary_adversarial_loss(self, y, y_predict):
         batch_size = y.size()[0]
         degs_dim = self.t_params['deg_dim']
 
@@ -81,8 +119,15 @@ class GenderFaderNetTrainer:
 
         return loss
 
+    def complementary_adversarial_loss(self, y, y_predict):
+        loss = self.get_attr_loss(y_predict, y, True)
+        #orig_loss = self.my_complementary_adversarial_loss(y, y_predict)
+        return loss
+
+
     def reconstruct_loss(self, x, x_reconstruct):
-        return self.reconstruction_loss_func(x_reconstruct, x)
+        return ((x - x_reconstruct) ** 2).mean()
+        # return self.reconstruction_loss_func(x_reconstruct, x)
 
     def discr_iteration(self, batch, mode):
 
@@ -100,8 +145,10 @@ class GenderFaderNetTrainer:
             z = self.autoenc.encode(x)
 
         y_predict = self.discrm(z)
+        logging.debug('Discriminator predict: ' + str(y_predict))
 
         loss = self.adversarial_loss(y, y_predict)
+        logging.debug('Discriminator adversarial loss: ' + str(loss))
 
         assert not (loss != loss).data.any(), "NaN result in loss function"
 
@@ -131,8 +178,11 @@ class GenderFaderNetTrainer:
         with torch.no_grad():
             y_predict = self.discrm(z)
 
+        logging.debug('AutoEnc adv predict: ' + str(y_predict))
         adversarial_loss = self.complementary_adversarial_loss(y, y_predict)
+        logging.debug('AutoEnc comp adv loss: ' + str(adversarial_loss))
         reconstruction_loss = self.reconstruct_loss(x, x_reconstruct)
+        logging.debug('AutoEnc reconstruction loss: ' + str(reconstruction_loss))
         loss = reconstruction_loss + self.lambda_e * adversarial_loss
 
         assert not (loss != loss).data.any(), "NaN result in loss function"
@@ -150,6 +200,7 @@ class GenderFaderNetTrainer:
 
         start = time.time()
         total_iterations = 0
+        iterations_for_log = 0
         d_mean_loss = 0
         ae_mean_loss = 0
         batch_size = self.t_params['batch_size']
@@ -165,19 +216,20 @@ class GenderFaderNetTrainer:
             if turns_pattern[pattern_idx] == 'D':
                 discriminator_loss = self.discr_iteration(batch, mode)
                 d_mean_loss += discriminator_loss.data[0]  # Already averaged by #nn_outputs * #batch_size
-                logging.info('Discriminator loss: ' + "{0:.2f}".format(discriminator_loss.data[0]))
+                logging.info('Discriminator total loss: ' + "{0:.2f}".format(discriminator_loss.data[0]))
             elif turns_pattern[pattern_idx] == 'AE':
                 auto_encoder_loss = self.autoenc_iteration(batch, mode)
                 if mode == 'Training':
                     self.lambda_e = min(self.lambda_e + self.lambda_e_step_size, self.lambda_e_max)
                 ae_mean_loss += auto_encoder_loss.data[0]
-                logging.info('AutoEncoder loss: ' + "{0:.2f}".format(auto_encoder_loss.data[0]))
+                logging.info('AutoEncoder total loss: ' + "{0:.2f}".format(auto_encoder_loss.data[0]))
 
             pattern_idx = (pattern_idx + 1) % len(turns_pattern)
             if pattern_idx == 0:
                 total_iterations += batch_size
+                iterations_for_log += 1
                 if total_iterations % batch_size * 5 == 0:
-                    logging.info('Processed %i iterations', total_iterations)
+                    logging.info('Processed %i iterations', iterations_for_log)
                 if total_iterations >= max_samples:
                     break
 
