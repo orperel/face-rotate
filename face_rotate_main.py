@@ -1,5 +1,8 @@
 import argparse
 import logging
+import numpy as np
+import torch
+import random
 
 from sanity.gender_trainer import GenderFaderNetTrainer
 
@@ -39,7 +42,11 @@ def evaluate_gender():
     show_gender_random_samples()
 
 
-logging.basicConfig(level=logging.DEBUG, format="%(message)s")
+# torch.manual_seed(555)
+# torch.cuda.manual_seed_all(555)
+# np.random.seed(555)
+# random.seed(555)
+logging.basicConfig(level=logging.INFO, format="%(message)s")
 description = 'face_rotate_main --run [ start | continue | eval ]'
 parser = argparse.ArgumentParser(description=description)
 parser.add_argument('--run', help='start / continue training, or evaluate results')
