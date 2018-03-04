@@ -216,13 +216,13 @@ class GenderFaderNetTrainer:
             if turns_pattern[pattern_idx] == 'D':
                 discriminator_loss = self.discr_iteration(batch, mode)
                 d_mean_loss += discriminator_loss.data[0]  # Already averaged by #nn_outputs * #batch_size
-                logging.info('Discriminator total loss: ' + "{0:.2f}".format(discriminator_loss.data[0]))
+                logging.info('Discriminator total loss: ' + "{0:.5f}".format(discriminator_loss.data[0]))
             elif turns_pattern[pattern_idx] == 'AE':
                 auto_encoder_loss = self.autoenc_iteration(batch, mode)
                 if mode == 'Training':
                     self.lambda_e = min(self.lambda_e + self.lambda_e_step_size, self.lambda_e_max)
                 ae_mean_loss += auto_encoder_loss.data[0]
-                logging.info('AutoEncoder total loss: ' + "{0:.2f}".format(auto_encoder_loss.data[0]))
+                logging.info('AutoEncoder total loss: ' + "{0:.5f}".format(auto_encoder_loss.data[0]))
 
             pattern_idx = (pattern_idx + 1) % len(turns_pattern)
             if pattern_idx == 0:
@@ -236,13 +236,13 @@ class GenderFaderNetTrainer:
         processed_samples_count = total_iterations
         d_mean_loss /= processed_samples_count  # Divide by number of samples
         ae_mean_loss /= processed_samples_count  # Divide by number of samples
-        logging.info('Epoch mean loss: [AutoEnc: ' + "{0:.2f}".format(ae_mean_loss) +
-                     ' Discriminator: ' + "{0:.2f}".format(d_mean_loss) + ']')
+        logging.info('Epoch mean loss: [AutoEnc: ' + "{0:.5f}".format(ae_mean_loss) +
+                     ' Discriminator: ' + "{0:.5f}".format(d_mean_loss) + ']')
         self.plotter.update_loss_plot_data(network='Discriminator', mode=mode, new_epoch=(t + 1), new_loss=d_mean_loss)
         self.plotter.update_loss_plot_data(network='AutoEncoder', mode=mode, new_epoch=(t + 1), new_loss=ae_mean_loss)
 
         end = time.time()
-        logging.info(mode + ' took ' + "{0:.2f}".format(end - start) + ' seconds')
+        logging.info(mode + ' took ' + "{0:.3f}".format(end - start) + ' seconds')
 
         return d_mean_loss, ae_mean_loss
 
