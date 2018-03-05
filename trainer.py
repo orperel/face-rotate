@@ -74,13 +74,15 @@ class FaderNetTrainer:
             degs_dim = self.t_params['deg_dim']
             one_hot_start = 3 if self.ypr_regress else 0
             for angle_idx in range(one_hot_start, 3*degs_dim, degs_dim):
-                y_target = y[:, angle_idx:angle_idx+degs_dim].max(1)[1] # Index of target degree
+                y_target = y[:, angle_idx:angle_idx+degs_dim].max(1)[1]  # Index of target degree
                 y_predict_target = y_predict[:, angle_idx:angle_idx+degs_dim]
                 loss = loss + self.adversarial_loss_func(y_predict_target, y_target)
         if self.ypr_regress:
             for angle_idx in range(3):
-                mse = self.adversarial_loss_func_regress(y_predict[:, angle_idx], y[:, angle_idx])
-                loss = loss - (torch.log(1 - mse) * self.t_params['ypr_regress_weight'])
+                mse = (((y_predict[:, angle_idx] - y[:, angle_idx])/180) ** 2).mean()
+                loss += mse
+                # mse = self.adversarial_loss_func_regress(y_predict[:, angle_idx], y[:, angle_idx])
+                # loss = loss - (torch.log(1 - mse) * self.t_params['ypr_regress_weight'])
 
         return loss
 
@@ -101,8 +103,10 @@ class FaderNetTrainer:
                 loss = loss + self.adversarial_loss_func(y_predict_target, y_target)
         else:
             for angle_idx in range(3):
-                mse = self.adversarial_loss_func_regress(y_predict[:, angle_idx], y[:, angle_idx])
-                loss = loss - (torch.log(mse) * self.t_params['ypr_regress_weight'])
+                mse = ((1 - torch.abs((y_predict[:, angle_idx] - y[:, angle_idx])/180)) ** 2).mean()
+                loss += mse
+                # mse = self.adversarial_loss_func_regress(y_predict[:, angle_idx], y[:, angle_idx])
+                # loss = loss - (torch.log(mse) * self.t_params['ypr_regress_weight'])
 
         return loss
 
@@ -122,9 +126,9 @@ class FaderNetTrainer:
         y = Variable(batch['label'], requires_grad=False)
 
         with torch.no_grad():
-            z = self.autoenc.encode(x)
+            z = self.autoenc.encode(Variable(x.data))
 
-        y_predict = self.discrm(z)
+        y_predict = self.discrm(Variable(z.data))
 
         loss = self.adversarial_loss(y, y_predict)
 
@@ -152,12 +156,11 @@ class FaderNetTrainer:
         y = Variable(batch['label'], requires_grad=False)
 
         z, x_reconstruct = self.autoenc(x, y)
+        reconstruction_loss = self.reconstruct_loss(x, x_reconstruct)
 
-        with torch.no_grad():
-            y_predict = self.discrm(z)
+        y_predict = self.discrm(z)
 
         adversarial_loss = self.complementary_adversarial_loss(y, y_predict)
-        reconstruction_loss = self.reconstruct_loss(x, x_reconstruct)
         loss = reconstruction_loss + self.lambda_e * adversarial_loss
 
         assert not (loss != loss).data.any(), "NaN result in loss function"
@@ -190,13 +193,13 @@ class FaderNetTrainer:
             if turns_pattern[pattern_idx] == 'D':
                 discriminator_loss = self.discr_iteration(batch, mode)
                 d_mean_loss += discriminator_loss.data[0]  # Already averaged by #nn_outputs * #batch_size
-                logging.info('Discriminator loss: ' + "{0:.2f}".format(discriminator_loss.data[0]))
+                logging.info('Discriminator loss: ' + "{0:.5f}".format(discriminator_loss.data[0]))
             elif turns_pattern[pattern_idx] == 'AE':
                 auto_encoder_loss = self.autoenc_iteration(batch, mode)
                 if mode == 'Training':
                     self.lambda_e = min(self.lambda_e + self.lambda_e_step_size, self.lambda_e_max)
                 ae_mean_loss += auto_encoder_loss.data[0]
-                logging.info('AutoEncoder loss: ' + "{0:.2f}".format(auto_encoder_loss.data[0]))
+                logging.info('AutoEncoder loss: ' + "{0:.5f}".format(auto_encoder_loss.data[0]))
 
             pattern_idx = (pattern_idx + 1) % len(turns_pattern)
             if pattern_idx == 0:
@@ -209,13 +212,13 @@ class FaderNetTrainer:
         processed_samples_count = total_iterations
         d_mean_loss /= processed_samples_count  # Divide by number of samples
         ae_mean_loss /= processed_samples_count  # Divide by number of samples
-        logging.info('Epoch mean loss: [AutoEnc: ' + "{0:.2f}".format(ae_mean_loss) +
-                     ' Discriminator: ' + "{0:.2f}".format(d_mean_loss) + ']')
+        logging.info('Epoch mean loss: [AutoEnc: ' + "{0:.5f}".format(ae_mean_loss) +
+                     ' Discriminator: ' + "{0:.5f}".format(d_mean_loss) + ']')
         self.plotter.update_loss_plot_data(network='Discriminator', mode=mode, new_epoch=(t + 1), new_loss=d_mean_loss)
         self.plotter.update_loss_plot_data(network='AutoEncoder', mode=mode, new_epoch=(t + 1), new_loss=ae_mean_loss)
 
         end = time.time()
-        logging.info(mode + ' took ' + "{0:.2f}".format(end - start) + ' seconds')
+        logging.info(mode + ' took ' + "{0:.3f}".format(end - start) + ' seconds')
 
         return d_mean_loss, ae_mean_loss
 

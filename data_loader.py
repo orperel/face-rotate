@@ -136,7 +136,6 @@ class UMDDataset(Dataset):
                 end = time.time()
                 logging.info('Loading completed after ' + '{0:.2f}'.format(end - start) + ' seconds')
 
-
     def fetch_from_batch(self, batch_file, batch_range, idx):
         x = batch_file[idx - batch_range[0]]
         x = self.normalize_img(x)
