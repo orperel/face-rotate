@@ -18,11 +18,10 @@ training_params = {
     # - 'decimated - faces bigger than 256, scaled down
     # - 'all' - use entire dataset regardless of size
     # - 'debug' - small set for debug purposes
-    'data_group': 'celebA',
+    'data_group': 'all',
 
     # Location of saved dataset
     'dataset_path': "/mnt/data/orperel/dataset" + os.path.sep,
-    # 'dataset_path': "sanity/dataset" + os.path.sep,
 
     # Location of saved plots
     'plot_path': "plots" + os.path.sep,
@@ -67,23 +66,23 @@ training_params = {
 
     # If true, the cross-entropy component is added to the AutoEndoer & Discriminator losses.
     # Rotation degrees are treated as discreet one hot vectors with log loss.
-    'ypr_quant': True,
+    'ypr_quant': False,
 
     # Determines how many dimensions the one-hot-vector representation of yaw-pitch-roll should contain.
     # The value should divide 180 without residuals.
     # --Used only if ypr_quant is True.
-    'deg_dim': 2,
+    'deg_dim': 180,
 
     # If true, the regression component is added to the AutoEncoder & Discriminator losses -
     # Repeat 3 times for yaw, pitch, roll:
     # For the discriminator: loss = loss - log(1 - || deg - deg_predict || **2)
     # For the auto-encoder: loss = loss - log(|| deg - deg_predict || **2)
     # Where deg, deg_predict are one dimensional vectors with [batch_size] dimensions
-    'ypr_regress': False,
+    'ypr_regress': True,
 
     # A multiplier for the ypr_regress loss component, to make sure it has the same order of magnitude as
     # the cross entropy component
-    'ypr_regress_weight': 5,
+    'ypr_regress_weight': 1,
 
     # When true, a random chance of 0.5 is applied to flip images horizontally.
     # Yaw, Roll labels are updated accordingly.
