@@ -81,12 +81,6 @@ class GenderFaderNetTrainer:
         self.lambda_e_step_size = (self.lambda_e_max - self.lambda_e) / t_params['autoenc_loss_reg_adaption_steps']
         self.gradient_max_norm = t_params['gradient_max_norm']
 
-    def adversarial_loss(self, y, y_predict):
-        y_target = y.max(1)[1] # Index of target degree
-        y_predict_target = y_predict
-        loss = self.adversarial_loss_func(y_predict_target, y_target)
-        return loss
-
     def get_attr_loss(self, preds, orig, flip):
         """
         Compute attributes loss.
@@ -103,6 +97,13 @@ class GenderFaderNetTrainer:
             y = (y + Variable(shift.cuda())) % 2
         loss += F.cross_entropy(x, y)
         k += 2
+        return loss
+
+    def adversarial_loss(self, y, y_predict):
+        loss = self.get_attr_loss(y_predict, y, False)
+        # y_target = y.max(1)[1] # Index of target degree
+        # y_predict_target = y_predict
+        # loss = self.adversarial_loss_func(y_predict_target, y_target)
         return loss
 
     def my_complementary_adversarial_loss(self, y, y_predict):
@@ -142,9 +143,9 @@ class GenderFaderNetTrainer:
         y = Variable(batch['label'], requires_grad=False)
 
         with torch.no_grad():
-            z = self.autoenc.encode(x)
+            z = self.autoenc.encode(Variable(x.data))
 
-        y_predict = self.discrm(z)
+        y_predict = self.discrm(Variable(z.data))
         logging.debug('Discriminator predict: ' + str(y_predict))
 
         loss = self.adversarial_loss(y, y_predict)
@@ -174,17 +175,16 @@ class GenderFaderNetTrainer:
         y = Variable(batch['label'], requires_grad=False)
 
         z, x_reconstruct = self.autoenc(x, y)
-
-        with torch.no_grad():
-            y_predict = self.discrm(z)
-
-        logging.debug('AutoEnc adv predict: ' + str(y_predict))
-        adversarial_loss = self.complementary_adversarial_loss(y, y_predict)
-        logging.debug('AutoEnc comp adv loss: ' + str(adversarial_loss))
         reconstruction_loss = self.reconstruct_loss(x, x_reconstruct)
         logging.debug('AutoEnc reconstruction loss: ' + str(reconstruction_loss))
-        loss = reconstruction_loss + self.lambda_e * adversarial_loss
 
+        y_predict = self.discrm(z)
+        logging.debug('AutoEnc adv predict: ' + str(y_predict))
+
+        adversarial_loss = self.complementary_adversarial_loss(y, y_predict)
+        logging.debug('AutoEnc comp adv loss: ' + str(adversarial_loss))
+
+        loss = reconstruction_loss + self.lambda_e * adversarial_loss
         assert not (loss != loss).data.any(), "NaN result in loss function"
 
         if mode == 'Training':
