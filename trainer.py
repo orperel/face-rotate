@@ -78,7 +78,10 @@ class FaderNetTrainer:
                 y_predict_target = y_predict[:, angle_idx:angle_idx+degs_dim]
                 loss = loss + self.adversarial_loss_func(y_predict_target, y_target)
         if self.ypr_regress:
-            loss = self.adversarial_loss_func_regress(y_predict, y) * self.t_params['ypr_regress_weight']
+            loss = (-torch.log(1-((y - y_predict) ** 2))).mean()
+
+            # loss = self.adversarial_loss_func_regress(y_predict, y) * self.t_params['ypr_regress_weight']
+
             # for angle_idx in range(3):
             #     mse = ((y_predict[:, angle_idx] - y[:, angle_idx]) ** 2).mean()
             #     loss += mse * self.t_params['ypr_regress_weight']
@@ -103,7 +106,9 @@ class FaderNetTrainer:
                 y_predict_target = y_predict[:, angle_idx:angle_idx+degs_dim]
                 loss = loss + self.adversarial_loss_func(y_predict_target, y_target)
         else:
-            loss = (1 - self.adversarial_loss_func_regress(y_predict, y)) * self.t_params['ypr_regress_weight']
+            loss = (-torch.log((y - y_predict) ** 2)).mean()
+            # loss = (1 - self.adversarial_loss_func_regress(y_predict, y)) * self.t_params['ypr_regress_weight']
+
             # for angle_idx in range(3):
             #     mse = ((1 - torch.abs(y_predict[:, angle_idx] - y[:, angle_idx])) ** 2).mean()
             #     loss += mse * self.t_params['ypr_regress_weight']
