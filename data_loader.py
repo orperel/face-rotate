@@ -148,6 +148,8 @@ class UMDDataset(Dataset):
             y_onehot = self.denormalize_angles(y)
             y_onehot = self.to_one_hot(y_onehot, self.deg_dim, self.deg_dim_quant)
             y = torch.cat((y, y_onehot)) if self.ypr_regress else y_onehot  # Concat with regress or take over
+        elif self.ypr_regress:
+            y.mul_(2).sub_(1)
 
         return {'data': x, 'label': y}
 

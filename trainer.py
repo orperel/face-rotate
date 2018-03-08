@@ -10,6 +10,7 @@ from utils import query_available_gpus
 import os
 import time
 import logging
+import math
 
 
 class FaderNetTrainer:
@@ -32,7 +33,7 @@ class FaderNetTrainer:
             self.adversarial_loss_func = nn.CrossEntropyLoss()
         if t_params['ypr_regress']:
             attr_dim += 3
-            self.adversarial_loss_func_regress = nn.MSELoss()
+            self.adversarial_loss_func_regress = nn.L1Loss()
             self.max_regress_loss = torch.FloatTensor(3).fill_(180 ** 2)
             if self.use_cuda:
                 self.max_regress_loss = self.max_regress_loss.cuda()
@@ -68,6 +69,36 @@ class FaderNetTrainer:
         self.lambda_e_step_size = (self.lambda_e_max - self.lambda_e) / t_params['autoenc_loss_reg_adaption_steps']
         self.gradient_max_norm = t_params['gradient_max_norm']
 
+    def log_gauss_prob(self, x, mean, sd=0.005, comp=False):
+        # compute the variance
+        var = sd ** 2
+        log_sd = math.log(sd)
+
+        if comp:
+            log_px = (1 - (x - mean) ** 2) / (2 * var) - log_sd - math.log(math.sqrt(2 * math.pi))
+        else:
+            log_px = ((x - mean) ** 2) / (2 * var) - log_sd - math.log(math.sqrt(2 * math.pi))
+
+        return log_px
+
+    def normal_loss(self, x, mean, sd, comp):
+
+        min_range = 0.5 * (1 + torch.erf((x - 0.025 - mean) * sd.reciprocal() / math.sqrt(2)))
+        max_range = 0.5 * (1 + torch.erf((x + 0.025 - mean) * sd.reciprocal() / math.sqrt(2)))
+
+        if not comp:
+            return torch.abs(max_range + min_range) + 0.000001
+        else:
+            return 1 - torch.abs(max_range + min_range) + 0.000001
+
+        # coef = 1 / (math.sqrt(2 * math.pi) * sd)
+        # expo = torch.exp(-((x - mean) ** 2) / (2 * var))
+        # px = coef * expo
+        # if comp:
+        #     px = 1 - px
+        #
+        # return torch.log(px)
+
     def adversarial_loss(self, y, y_predict):
         loss = 0
         if self.ypr_quant:
@@ -78,9 +109,11 @@ class FaderNetTrainer:
                 y_predict_target = y_predict[:, angle_idx:angle_idx+degs_dim]
                 loss = loss + self.adversarial_loss_func(y_predict_target, y_target)
         if self.ypr_regress:
-            loss = (-torch.log(1-((y - y_predict) ** 2))).mean()
+            # loss = self.log_gauss_prob(x=y_predict, mean=y, sd=0.005, comp=False).mean()
 
-            # loss = self.adversarial_loss_func_regress(y_predict, y) * self.t_params['ypr_regress_weight']
+            # loss = (-torch.log(1-((y - y_predict) ** 2))).mean()
+
+            loss = self.adversarial_loss_func_regress(y_predict, y) * self.t_params['ypr_regress_weight']
 
             # for angle_idx in range(3):
             #     mse = ((y_predict[:, angle_idx] - y[:, angle_idx]) ** 2).mean()
@@ -106,8 +139,9 @@ class FaderNetTrainer:
                 y_predict_target = y_predict[:, angle_idx:angle_idx+degs_dim]
                 loss = loss + self.adversarial_loss_func(y_predict_target, y_target)
         else:
-            loss = (-torch.log((y - y_predict) ** 2)).mean()
-            # loss = (1 - self.adversarial_loss_func_regress(y_predict, y)) * self.t_params['ypr_regress_weight']
+            # loss = self.log_gauss_prob(x=y_predict, mean=y, sd=0.005, comp=True).mean()
+            # loss = (-torch.log((y - y_predict) ** 2)).mean()
+            loss = (2 - self.adversarial_loss_func_regress(y_predict, y)) * self.t_params['ypr_regress_weight']
 
             # for angle_idx in range(3):
             #     mse = ((1 - torch.abs(y_predict[:, angle_idx] - y[:, angle_idx])) ** 2).mean()

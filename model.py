@@ -130,6 +130,7 @@ class FaderNetDiscriminator(nn.Module):
             nn.Linear(in_features=block_size, out_features=512, bias=True),
             nn.LeakyReLU(negative_slope=0.2, inplace=True),
             nn.Linear(in_features=512, out_features=attr_dim, bias=True),
+            nn.Tanh()
         )
 
         # xavier_initialization(self.modules())
