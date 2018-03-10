@@ -141,7 +141,9 @@ class FaderNetTrainer:
         else:
             # loss = self.log_gauss_prob(x=y_predict, mean=y, sd=0.005, comp=True).mean()
             # loss = (-torch.log((y - y_predict) ** 2)).mean()
-            loss = 10 - self.adversarial_loss_func_regress(y_predict, y) * self.t_params['ypr_regress_weight']
+            x_in = y_predict[:, :].contiguous()
+            y_in = y[:, :]
+            loss = 2 - self.adversarial_loss_func_regress(x_in, y_in) * self.t_params['ypr_regress_weight']
 
             # for angle_idx in range(3):
             #     mse = ((1 - torch.abs(y_predict[:, angle_idx] - y[:, angle_idx])) ** 2).mean()
