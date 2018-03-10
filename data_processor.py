@@ -13,7 +13,9 @@ ENTRIES_PER_OUTPUT = 40000       # Amount of entries iterated for each batch
 UMD_BATCH1_URL = 'https://obj.umiacs.umd.edu/umdfaces/umdfaces_images/umdfaces_batch1.tar.gz'
 UMD_BATCH2_URL = 'https://obj.umiacs.umd.edu/umdfaces/umdfaces_images/umdfaces_batch2.tar.gz'
 UMD_BATCH3_URL = 'https://obj.umiacs.umd.edu/umdfaces/umdfaces_images/umdfaces_batch3.tar.gz'
-data_root = '/mnt/data/orperel'  # Where should the dataset be downloaded / extracted to
+download_root = '/mnt/data/orperel'  # Where should the dataset be downloaded to
+data_root = '/debug_models'          # Where should the dataset be extracted to
+limit = 100                  # None for no limit
 
 
 class DataPurpose(Enum):
@@ -37,7 +39,7 @@ def fetch_remote_dataset(remote_url):
     else:
         raise ValueError('Invalid batch index for UMD batch')
 
-    local_path = os.path.join(data_root, 'downloads', 'umdfaces_batch' + index)
+    local_path = os.path.join(download_root, 'downloads', 'umdfaces_batch' + index)
 
     if not os.path.exists(local_path):
         os.makedirs(local_path)
@@ -82,8 +84,8 @@ def normalize_dof(yaw, pitch, roll):
 
     return yaw_n, pitch_n, roll_n
 
-def extract_data(root_path, batch_index, data_purpose):
-    downloads_path = os.path.join(root_path, 'downloads', 'umdfaces_batch')
+def extract_data(root_path, download_root, batch_index, data_purpose):
+    downloads_path = os.path.join(download_root, 'downloads', 'umdfaces_batch')
     downloads_path += str(batch_index)
     downloads_path = os.path.join(downloads_path, 'umdfaces_batch' + str(batch_index))
     assert os.path.isdir(downloads_path), "Invalid downloads_path supplied for UMDFaces dataset: %r" % downloads_path
@@ -158,6 +160,9 @@ def extract_data(root_path, batch_index, data_purpose):
                 total_decimated += len(decimated_batch)
                 total_enlarged += len(enlarged_batch)
 
+            if limit is not None and row_idx == limit:
+                break;
+
         # Last batch
         if decimated:
             decimated_batch = np.concatenate([img_data.transpose((2, 0, 1))[None] for img_data in decimated])
@@ -193,6 +198,6 @@ def extract_data(root_path, batch_index, data_purpose):
 fetch_remote_dataset(remote_url=UMD_BATCH1_URL)
 fetch_remote_dataset(remote_url=UMD_BATCH2_URL)
 fetch_remote_dataset(remote_url=UMD_BATCH3_URL)
-extract_data(root_path=data_root, batch_index=1, data_purpose=DataPurpose.TRAINING)
-extract_data(root_path=data_root, batch_index=2, data_purpose=DataPurpose.VALIDATION)
-extract_data(root_path=data_root, batch_index=3, data_purpose=DataPurpose.TEST)
+extract_data(root_path=data_root, download_root=download_root, batch_index=1, data_purpose=DataPurpose.TRAINING)
+extract_data(root_path=data_root, download_root=download_root, batch_index=2, data_purpose=DataPurpose.VALIDATION)
+extract_data(root_path=data_root, download_root=download_root, batch_index=3, data_purpose=DataPurpose.TEST)
