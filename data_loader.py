@@ -111,7 +111,7 @@ class UMDDataset(Dataset):
     @staticmethod
     def flip_horizontally(x, y):
         x = x.index_select(2, torch.arange(x.size(2) - 1, -1, -1).long())
-        y = torch.FloatTensor(np.array([1.0 - y[0], y[1], 1.0-y[2]]))
+        y = torch.FloatTensor(np.array([-y[0], y[1], -y[2]]))
         return x,y
 
     def prefetch(self, idx, true_prefetch):
@@ -141,15 +141,15 @@ class UMDDataset(Dataset):
         x = self.normalize_img(x)
         y = self.labels[idx].float()
 
-        if self.h_flip_augment and random.random() >= 0.5:
-            x, y = self.flip_horizontally(x, y)
+        if self.ypr_regress:
+            y.mul_(2).sub_(1)
+            if self.h_flip_augment and random.random() >= 0.5:
+                x, y = self.flip_horizontally(x, y)
 
         if self.ypr_quant:
             y_onehot = self.denormalize_angles(y)
             y_onehot = self.to_one_hot(y_onehot, self.deg_dim, self.deg_dim_quant)
             y = torch.cat((y, y_onehot)) if self.ypr_regress else y_onehot  # Concat with regress or take over
-        elif self.ypr_regress:
-            y.mul_(2).sub_(1)
 
         return {'data': x, 'label': y}
 
