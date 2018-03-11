@@ -7,6 +7,7 @@ import numpy as np
 import time
 import logging
 import threading
+from torchsample.torchsample.transforms import Rotate
 
 
 class SubGroupsRandomSampler(Sampler):
@@ -114,6 +115,27 @@ class UMDDataset(Dataset):
         y = torch.FloatTensor(np.array([-y[0], y[1], -y[2]]))
         return x,y
 
+    @staticmethod
+    def rotate(x, y):
+        ''' Assume x is a Tensor in range [0, 1] '''
+        ''' Assume y is a Tensor in range [-1, 1] '''
+        deg = random.uniform(-1, 1)
+        while not (-1 <= (deg + y[2]) <= 1.0):
+            deg = random.uniform(-1, 1)
+
+        return Rotate(deg*180)(x), y.add_(torch.from_numpy(np.array([0.0, 0.0, deg])).float())
+
+    @staticmethod
+    def add_gaussian_noise(x, mean=0, var=0.1):
+        ''' Assume x is a Tensor in range [0, 1] '''
+        sigma = var ** 0.5
+        noise = torch.normal(mean=mean, std=torch.zeros_like(x).add_(sigma))
+        return torch.clamp(x + noise, min=0.0, max=1.0)
+
+    @staticmethod
+    def quantize(y, factor):
+        return torch.floor(y.mul_(180/factor)).div_(180/factor)
+
     def prefetch(self, idx, true_prefetch):
         with self.dataset_lock:
             if not self.current_batch_range[0] <= idx < self.current_batch_range[1]:
@@ -140,11 +162,18 @@ class UMDDataset(Dataset):
         x = batch_file[idx - batch_range[0]]
         x = self.normalize_img(x)
         y = self.labels[idx].float()
+        y = self.quantize(y, factor=2)
 
         if self.ypr_regress:
             y.mul_(2).sub_(1)
             if self.h_flip_augment and random.random() >= 0.5:
                 x, y = self.flip_horizontally(x, y)
+
+            if random.random() >= 0.5:
+                x, y = self.rotate(x, y)
+
+            if random.random() >= 0.5:
+                x = self.add_gaussian_noise(x, mean=0, var=0.001)
 
         if self.ypr_quant:
             y_onehot = self.denormalize_angles(y)

@@ -33,7 +33,7 @@ class FaderNetTrainer:
             self.adversarial_loss_func = nn.CrossEntropyLoss()
         if t_params['ypr_regress']:
             attr_dim += 3
-            self.adversarial_loss_func_regress = nn.L1Loss()
+            self.adversarial_loss_func_regress = nn.MSELoss()
             self.max_regress_loss = torch.FloatTensor(3).fill_(180 ** 2)
             if self.use_cuda:
                 self.max_regress_loss = self.max_regress_loss.cuda()
